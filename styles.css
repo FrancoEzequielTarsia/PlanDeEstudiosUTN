@@ -24,7 +24,7 @@
   --rojo:      #C4342B;
 
   --radio:     12px;
-  --fila:      44px;
+  --fila:      50px;
 
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", monospace;
@@ -87,8 +87,8 @@ body {
   background: var(--bg);
   color: var(--label);
   font-family: var(--font);
-  font-size: 17px;
-  line-height: 1.35;
+  font-size: 18px;
+  line-height: 1.4;
 }
 
 h1, h2 { margin: 0; font-weight: 600; }
@@ -119,12 +119,12 @@ p { margin: 0; }
   border-bottom: 1px solid var(--sep);
 }
 .topbar__in {
-  max-width: 720px; margin: 0 auto;
+  max-width: 1060px; margin: 0 auto;
   padding: 14px 16px 12px;
   display: flex; flex-direction: column; gap: 12px; align-items: center;
 }
 .topbar__izq { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.topbar__title { font-size: 20px; letter-spacing: -.02em; }
+.topbar__title { font-size: 22px; letter-spacing: -.02em; }
 
 /* Volver a Plan desde una herramienta. */
 .volver {
@@ -151,7 +151,7 @@ p { margin: 0; }
   max-width: 100%;
 }
 .seg__btn {
-  font: inherit; font-size: 14px; font-weight: 500;
+  font: inherit; font-size: 15px; font-weight: 500;
   color: var(--label);
   background: transparent;
   border: 0; border-radius: 7px;
@@ -172,20 +172,20 @@ p { margin: 0; }
 /* ------------------------------------------------------------ secciones */
 
 .wrap {
-  max-width: 720px;
+  max-width: 1060px;
   margin: 0 auto;
   padding: 8px 16px 64px;
 }
-.wrap--ancho { max-width: 1120px; }
+.wrap--ancho { max-width: 1360px; }
 /* El mapa necesita los 5 niveles a la vez: si no entran, deja de servir. */
-.wrap--mapa { max-width: 1560px; }
+.wrap--mapa { max-width: 1800px; }
 /* El detalle debajo del mapa se lee mejor angosto. */
-.wrap--mapa #detalle { max-width: 760px; }
-.wrap--mapa #detalle + .ghead, .wrap--mapa .ghead { max-width: 760px; }
+.wrap--mapa #detalle { max-width: 900px; }
+.wrap--mapa #detalle + .ghead, .wrap--mapa .ghead { max-width: 900px; }
 
 .ghead {
   display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
-  font-size: 13px; font-weight: 600;
+  font-size: 14px; font-weight: 600;
   letter-spacing: .04em; text-transform: uppercase;
   color: var(--label-2);
   padding: 26px 16px 8px;
@@ -199,7 +199,7 @@ p { margin: 0; }
 .ghead__act[aria-pressed="true"] { font-weight: 700; }
 
 .gfoot {
-  font-size: 13px; line-height: 1.45;
+  font-size: 14px; line-height: 1.45;
   color: var(--label-2);
   padding: 8px 16px 0;
 }
@@ -238,10 +238,10 @@ p { margin: 0; }
 .fila-wrap { position: relative; }
 
 .row__label { flex: 1; min-width: 0; }
-.row__sub { color: var(--label-2); font-size: 14px; font-weight: 400; }
+.row__sub { color: var(--label-2); font-size: 15px; font-weight: 400; }
 .row__value { color: var(--label-2); white-space: nowrap; }
 .row__input {
-  font: inherit; font-size: 17px;
+  font: inherit; font-size: 18px;
   width: 88px; text-align: right;
   color: var(--label); background: transparent;
   border: 0; padding: 4px 0;
@@ -257,7 +257,7 @@ p { margin: 0; }
 
 .grilla {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
   gap: 18px 14px;
   align-items: start;
 }
@@ -291,10 +291,10 @@ p { margin: 0; }
   border-radius: 8px;
 }
 
-.celda__nom { display: block; font-size: 14.5px; line-height: 1.25; }
+.celda__nom { display: block; font-size: 15.5px; line-height: 1.25; }
 .celda__pie {
   display: flex; align-items: center; gap: 6px;
-  margin-top: 4px; font-size: 11.5px; color: var(--label-2);
+  margin-top: 5px; font-size: 12.5px; color: var(--label-2);
 }
 .celda__nota {
   margin-left: auto; font-size: 14px; font-weight: 600;
@@ -475,24 +475,24 @@ p { margin: 0; }
 
 .herr__panel { padding: 16px; margin-top: 18px; }
 
-.sim__pregunta { font-size: 17px; font-weight: 600; }
-.sim__ayuda { font-size: 13px; color: var(--label-2); margin-top: 5px; line-height: 1.45; }
+.sim__pregunta { font-size: 19px; font-weight: 600; }
+.sim__ayuda { font-size: 14px; color: var(--label-2); margin-top: 5px; line-height: 1.45; }
 .sim__cab { padding-bottom: 8px; }
 
 .sim__lista { margin: 0 -16px; }
 .sim__fila { cursor: pointer; padding-left: 16px; padding-right: 16px; }
 .sim__fila:hover { background: var(--card-hi); }
 .sim__fila input { width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
-.sim__nom { display: block; font-size: 15px; line-height: 1.3; }
+.sim__nom { display: block; font-size: 16.5px; line-height: 1.3; }
 .sim__meta {
   display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
-  margin-top: 3px; font-size: 12px; color: var(--label-2);
+  margin-top: 4px; font-size: 13px; color: var(--label-2);
 }
 .sim__todas { margin: 0 -16px -16px; padding-left: 16px; padding-right: 16px; cursor: pointer; }
 .sim__todas input { width: 16px; height: 16px; accent-color: var(--accent); }
 
 .veredicto {
-  padding: 11px 13px; border-radius: 9px; font-size: 15px;
+  padding: 13px 15px; border-radius: 9px; font-size: 16px;
   border: 1px solid var(--sep);
 }
 .veredicto[data-ok="1"] { border-color: var(--verde); color: var(--verde); }
@@ -504,7 +504,7 @@ p { margin: 0; }
 .sim__sub { font-size: 14px; margin-top: 18px; font-weight: 500; }
 .sim__nota { font-size: 12px; color: var(--label-2); margin-top: 16px; line-height: 1.45; }
 
-.comp { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 14px; }
+.comp { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 15px; }
 .comp th { text-align: left; font-weight: 400; color: var(--label-2); padding: 7px 0; }
 .comp thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--label-3); }
 .comp__num { text-align: right; font-variant-numeric: tabular-nums; padding: 7px 0 7px 14px; }
@@ -516,11 +516,11 @@ p { margin: 0; }
 .comp tbody tr + tr th, .comp tbody tr + tr td { border-top: 1px solid var(--sep); }
 
 .destraba { margin-top: 10px; display: flex; flex-direction: column; gap: 7px; }
-.destraba li { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.destraba li { display: flex; align-items: center; gap: 8px; font-size: 15px; }
 .destraba__niv { margin-left: auto; font-size: 12px; color: var(--label-2); }
 
 .crit__cifra { display: flex; align-items: baseline; gap: 10px; }
-.crit__n { font-size: 52px; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
+.crit__n { font-size: 60px; font-weight: 700; line-height: 1; letter-spacing: -.03em; }
 .crit__u { font-size: 15px; color: var(--label-2); }
 .crit__exp { font-size: 14px; color: var(--label-2); margin-top: 12px; line-height: 1.5; }
 .crit__paso { align-items: flex-start; }
@@ -584,3 +584,12 @@ p { margin: 0; }
    idea, pero se lee como apagada. */
 .celda.is-anulada .celda__nom { color: var(--label-2); text-decoration: line-through; }
 .celda.is-anulada .celda__pie { color: var(--label-3); }
+
+/* Encabezado de grupo dentro de la lista del simulador. */
+.sim__grupo {
+  padding: 14px 16px 6px;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: var(--label-2);
+}
+.sim__pie { padding-top: 12px; border-top: 1px solid var(--sep); margin-top: 4px; }

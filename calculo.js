@@ -214,9 +214,12 @@
     });
     var estadoSim = function (id) { return estadoDe(copia.materias[id]); };
 
-    // Materias elegidas que hoy no podes cursar.
+    // Materias elegidas que hoy no podes cursar. Las que ya estas cursando no
+    // cuentan como problema: justamente las vas a terminar este ciclo.
     var noHabilitadas = seleccion.filter(function (id) {
-      return indice[id] && !puedeCursar(indice[id], estadoBase);
+      if (!indice[id]) return false;
+      if (estadoBase(id) === 'cursando') return false;
+      return !puedeCursar(indice[id], estadoBase);
     }).map(function (id) { return indice[id]; });
 
     // Dos materias de la misma tanda donde una es correlativa de la otra:

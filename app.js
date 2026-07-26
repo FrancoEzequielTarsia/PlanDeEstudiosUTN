@@ -23,6 +23,7 @@
   var soloPuedo = false;
   var seleccionSim = {};   // materias marcadas en el simulador
   var verTodas = false;    // el simulador muestra también las no habilitadas
+  var simInicializado = false;
 
   // --------------------------------------------------------------- datos
 
@@ -876,48 +877,85 @@
 
   // ---------------------------------------------------------- simulador
 
+  function filaSim(m) {
+    var fila = el('label', 'row sim__fila');
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = !!seleccionSim[m.codigo];
+    cb.addEventListener('change', function () {
+      if (cb.checked) seleccionSim[m.codigo] = 1; else delete seleccionSim[m.codigo];
+      pintarResultadoSim();
+    });
+    fila.appendChild(cb);
+
+    var estado = estadoDe(m.codigo);
+    var id = el('span', 'row__label');
+    id.appendChild(el('span', 'sim__nom', m.nombre));
+    var meta = el('span', 'sim__meta');
+    meta.appendChild(punto(puedeCursar(m) ? 'var(--accent)' : colorDe(estado)));
+    meta.appendChild(el('span', null,
+      (m.nivel ? 'Nivel ' + m.nivel : 'Electiva') +
+      (m.duracion ? ' · ' + (m.duracion === 'anual' ? 'anual' : 'cuatrimestral') : '') + ' · ' +
+      (puedeCursar(m) ? 'podés cursarla' : ETIQUETA[estado].toLowerCase())));
+    id.appendChild(meta);
+    fila.appendChild(id);
+    return fila;
+  }
+
   function pintarSimulador() {
     var lista = document.getElementById('sim-lista');
     lista.textContent = '';
 
-    var candidatas = activas().filter(function (m) {
-      return verTodas ? !C.APROBADAS[estadoDe(m.codigo)] : puedeCursar(m);
+    var enCurso = activas().filter(function (m) { return estadoDe(m.codigo) === 'cursando'; });
+    var libres = activas().filter(function (m) {
+      return verTodas
+        ? (!C.APROBADAS[estadoDe(m.codigo)] && estadoDe(m.codigo) !== 'cursando')
+        : puedeCursar(m);
     });
+
+    // Lo que ya estás cursando termina este ciclo, así que entra marcado: la
+    // simulación tiene que mostrar cómo cerrás el cuatrimestre, no sólo lo que
+    // sumás si te anotás a algo más.
+    if (!simInicializado) {
+      enCurso.forEach(function (m) { seleccionSim[m.codigo] = 1; });
+      simInicializado = true;
+    }
 
     document.getElementById('sim-ayuda').textContent = verTodas
       ? 'Todas las materias que todavía no aprobaste. Las que no podés cursar quedan marcadas.'
-      : 'Estas son las ' + candidatas.length + ' materias que hoy podés cursar. Marcá las que ' +
-        'pensás anotarte.';
+      : 'Lo que estás cursando ya viene marcado. Sumá las que pensás anotarte.';
 
-    if (!candidatas.length) {
+    var ordenar = function (a, b) { return (a.nivel || 9) - (b.nivel || 9); };
+
+    if (enCurso.length) {
+      lista.appendChild(el('p', 'sim__grupo', 'Ya las estás cursando'));
+      enCurso.sort(ordenar).forEach(function (m) { lista.appendChild(filaSim(m)); });
+    }
+
+    if (libres.length) {
+      lista.appendChild(el('p', 'sim__grupo', enCurso.length ? 'Te podés anotar a' : 'Podés anotarte a'));
+      libres.sort(ordenar).forEach(function (m) { lista.appendChild(filaSim(m)); });
+    }
+
+    if (!enCurso.length && !libres.length) {
       lista.appendChild(el('p', 'vacio', verTodas
         ? 'Ya aprobaste todo el plan.'
         : 'No hay ninguna materia habilitada con tu estado actual.'));
     }
 
-    candidatas.sort(function (a, b) { return (a.nivel || 9) - (b.nivel || 9); });
-    candidatas.forEach(function (m) {
-      var fila = el('label', 'row sim__fila');
-      var cb = document.createElement('input');
-      cb.type = 'checkbox';
-      cb.checked = !!seleccionSim[m.codigo];
-      cb.addEventListener('change', function () {
-        if (cb.checked) seleccionSim[m.codigo] = 1; else delete seleccionSim[m.codigo];
-        pintarResultadoSim();
-      });
-      fila.appendChild(cb);
-
-      var id = el('span', 'row__label');
-      id.appendChild(el('span', 'sim__nom', m.nombre));
-      var meta = el('span', 'sim__meta');
-      meta.appendChild(punto(puedeCursar(m) ? 'var(--accent)' : colorDe(estadoDe(m.codigo))));
-      meta.appendChild(el('span', null,
-        (m.nivel ? 'Nivel ' + m.nivel : 'Electiva') + ' · ' +
-        (puedeCursar(m) ? 'podés cursarla' : ETIQUETA[estadoDe(m.codigo)].toLowerCase())));
-      id.appendChild(meta);
-      fila.appendChild(id);
-      lista.appendChild(fila);
-    });
+    // Las electivas suman igual que cualquier materia, pero sólo aparecen acá
+    // si ya las agregaste en Plan.
+    var cupo = (typeof CUPO_ELECTIVAS === 'number') ? CUPO_ELECTIVAS : 3;
+    var faltan = cupo - datos.electivas.length;
+    var pie = document.getElementById('sim-electivas');
+    if (faltan > 0) {
+      pie.hidden = false;
+      pie.textContent = 'Te ' + (faltan === 1 ? 'falta elegir 1 electiva' : 'faltan elegir ' + faltan + ' electivas') +
+        '. Las electivas suman al peso académico igual que el resto, pero para simularlas ' +
+        'primero tenés que agregarlas en Plan.';
+    } else {
+      pie.hidden = true;
+    }
 
     pintarResultadoSim();
   }
