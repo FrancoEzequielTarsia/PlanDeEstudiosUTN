@@ -76,6 +76,16 @@
           <span class="row__sub">Cuántos cuatrimestres te faltan como mínimo</span></span>
         <span class="row__value chevron" aria-hidden="true">›</span>
       </button>
+      <button type="button" class="row row--btn" data-herr="evolucion">
+        <span class="row__label">Evolución del peso académico
+          <span class="row__sub">Cómo se movió ciclo a ciclo</span></span>
+        <span class="row__value chevron" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="row row--btn" data-herr="proyeccion">
+        <span class="row__label">Proyección de egreso
+          <span class="row__sub">Cuándo terminás según el ritmo que lleves</span></span>
+        <span class="row__value chevron" aria-hidden="true">›</span>
+      </button>
       <button type="button" class="row row--btn" data-herr="impacto">
         <span class="row__label">Ordenar por impacto
           <span class="row__sub">Qué materia te destraba más si la aprobás</span></span>
@@ -86,7 +96,10 @@
 
     <h2 class="ghead">
       Materias
-      <button type="button" class="ghead__act" id="btn-filtro" aria-pressed="false">Sólo las que podés cursar</button>
+      <span class="ghead__acts">
+        <button type="button" class="ghead__act" id="btn-deshacer" hidden>Deshacer</button>
+        <button type="button" class="ghead__act" id="btn-filtro" aria-pressed="false">Sólo las que podés cursar</button>
+      </span>
     </h2>
     <div class="grilla" id="niveles"></div>
     <div id="editor-materia"></div>
@@ -191,6 +204,11 @@
         <span class="row__label">Importar un respaldo</span>
         <span class="row__value">JSON</span>
       </button>
+      <button type="button" class="row row--btn" id="btn-imprimir">
+        <span class="row__label">Imprimir el plan
+          <span class="row__sub">O guardarlo como PDF desde el diálogo de impresión</span></span>
+        <span class="row__value">PDF</span>
+      </button>
       <button type="button" class="row row--btn row--peligro" id="btn-reiniciar">
         <span class="row__label">Borrar todo</span>
       </button>
@@ -273,7 +291,42 @@
     <p class="gfoot" id="imp-pie"></p>
   </section>
 
+  <!-- ------------------------------------------------------- EVOLUCION -->
+  <section class="wrap" id="vista-evolucion" hidden>
+    <div class="card herr__panel">
+      <p class="sim__pregunta">¿Cómo viene mi peso académico?</p>
+      <p class="sim__ayuda">Reconstruido a partir del año que cargaste en cada materia. Lo que
+        muestra bien es la tendencia, no el valor exacto de cada ciclo pasado: de cada materia se
+        guarda un solo año, y los finales desaprobados y ausentes no tienen fecha.</p>
+    </div>
+    <div class="card herr__panel" id="evo-grafico"></div>
+    <h2 class="ghead">Ciclo por ciclo</h2>
+    <div class="card" id="evo-tabla"></div>
+  </section>
+
+  <!-- ------------------------------------------------------ PROYECCION -->
+  <section class="wrap" id="vista-proyeccion" hidden>
+    <div class="card herr__panel">
+      <p class="sim__pregunta">¿Cuándo me recibo?</p>
+      <p class="field-row" style="margin-top:14px">
+        <label for="proy-ritmo">Materias que curso por cuatrimestre</label>
+        <input class="campo" type="range" id="proy-ritmo" min="1" max="8" step="1" value="4"
+               style="max-width:220px">
+        <b class="num" id="proy-ritmo-n">4</b>
+      </p>
+    </div>
+    <div class="card herr__panel" id="proy-resultado"></div>
+  </section>
+
 </main>
+
+<div class="buscador" id="buscador" hidden>
+  <div class="buscador__caja" role="dialog" aria-label="Buscar materia">
+    <input type="text" id="buscador-inp" class="buscador__inp" placeholder="Buscar una materia…"
+           autocomplete="off" spellcheck="false">
+    <div class="buscador__res" id="buscador-res"></div>
+  </div>
+</div>
 
 <dialog class="modal" id="modal-electiva">
   <form method="dialog" class="modal__in">

@@ -197,6 +197,101 @@
     return mejorGlobal;
   }
 
+  // --- evolucion ----------------------------------------------------------
+
+  /**
+   * Reconstruye el peso academico ciclo por ciclo a partir del anio cargado en
+   * cada materia.
+   *
+   * Es una reconstruccion, no un registro: de cada materia se guarda un solo
+   * anio (el de su estado actual), asi que una materia aprobada en 2025 se
+   * cuenta como aprobada desde 2025 aunque la hubieras regularizado antes. Los
+   * finales desaprobados y ausentes no guardan fecha, asi que se aplican
+   * constantes a toda la serie. Lo que la curva muestra bien es la TENDENCIA.
+   */
+  function historialPeso(materias, datos, ajustes, hoy) {
+    var ahora = hoy || new Date();
+    var cicloActual = cicloLectivo(ahora);
+    var aj = ajustes || ajustesVacios();
+
+    var anios = [];
+    materias.forEach(function (m) {
+      var r = datos.materias[m.codigo];
+      if (r && r.anio) anios.push(r.anio);
+    });
+    var inicio = aj.anioInicio || (anios.length ? Math.min.apply(null, anios) : null);
+    if (!inicio) return [];
+
+    var desap = Math.max(0, aj.finalesDesaprobados || 0);
+    var fAu = Math.max(0, aj.ausentesCiclo || 0);
+    var serie = [];
+
+    for (var y = inicio; y <= cicloActual; y++) {
+      var mAp = 0, fAd = 0, mAb = 0, mR = 0;
+      materias.forEach(function (m) {
+        var r = datos.materias[m.codigo];
+        if (!r || !r.anio || r.anio > y) return;
+        var e = estadoDe(r);
+        if (APROBADAS[e]) mAp++;
+        if (e === 'regularizada') fAd++;
+        if (r.anio === y) {
+          if (e === 'abandonada') mAb++;
+          if (TIENE_CURSADA[e]) mR++;
+        }
+      });
+      var aniosCarrera = y - inicio + 1;
+      serie.push({
+        ciclo: y,
+        aprobadas: mAp,
+        pesoViejo: 11 * mAp - 5 * aniosCarrera - 3 * desap,
+        pesoNuevo: 11 * mAp - 7 * fAd - 19 * (y === cicloActual ? fAu : 0) - 17 * mAb + 5 * mR
+      });
+    }
+    return serie;
+  }
+
+  // --- proyeccion ---------------------------------------------------------
+
+  /**
+   * Cuanto te falta para recibirte, cursando `ritmo` materias por cuatrimestre.
+   *
+   * El piso nunca puede ser menor que el camino critico: por mas materias que
+   * curses en paralelo, una cadena de correlativas no se puede acortar.
+   */
+  function proyeccion(materias, estadoPorId, ritmo, hoy) {
+    var ahora = hoy || new Date();
+    var cicloActual = cicloLectivo(ahora);
+    var r = Math.max(1, ritmo || 1);
+
+    var pendientes = materias.filter(function (m) {
+      return !APROBADAS[estadoPorId(m.codigo)];
+    });
+    // Lo que ya cursaste (regularizada o cursando) no vuelve a ocupar tiempo de
+    // cursada: solo te falta rendir.
+    var faltaCursar = pendientes.filter(function (m) {
+      var e = estadoPorId(m.codigo);
+      return e !== 'regularizada' && e !== 'cursando';
+    });
+    var cuatriMateria = faltaCursar.reduce(function (a, m) {
+      return a + (m.duracion === 'anual' ? 2 : 1);
+    }, 0);
+
+    var porRitmo = Math.ceil(cuatriMateria / r);
+    var critico = caminoCritico(materias, estadoPorId).cuatri;
+    var cuatrimestres = Math.max(porRitmo, critico);
+
+    return {
+      pendientes: pendientes.length,
+      faltaCursar: faltaCursar.length,
+      cuatriMateria: cuatriMateria,
+      porRitmo: porRitmo,
+      critico: critico,
+      loLimita: porRitmo >= critico ? 'ritmo' : 'correlativas',
+      cuatrimestres: cuatrimestres,
+      anioEgreso: cuatrimestres > 0 ? cicloActual + Math.floor((cuatrimestres - 1) / 2) : cicloActual
+    };
+  }
+
   // --- simulacion ---------------------------------------------------------
 
   /**
@@ -363,6 +458,8 @@
     descendientes: descendientes,
     impacto: impacto,
     caminoCritico: caminoCritico,
+    historialPeso: historialPeso,
+    proyeccion: proyeccion,
     simular: simular,
     promedio: promedio,
     metricas: metricas

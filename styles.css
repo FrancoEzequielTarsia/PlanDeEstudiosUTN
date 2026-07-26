@@ -593,3 +593,70 @@ p { margin: 0; }
   color: var(--label-2);
 }
 .sim__pie { padding-top: 12px; border-top: 1px solid var(--sep); margin-top: 4px; }
+
+/* ------------------------------------------------ evolución del peso */
+
+.evo { display: block; width: 100%; height: auto; }
+.evo__cero { stroke: var(--label-3); stroke-width: 1; stroke-dasharray: 3 3; }
+.evo__linea { fill: none; stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+/* El trazo nunca se rellena: si el color va en la misma regla que la línea,
+   le pisa el fill:none y el gráfico se convierte en un área. */
+.evo__linea--viejo { stroke: var(--accent); }
+.evo__linea--nuevo { stroke: var(--violeta); stroke-dasharray: 7 5; }
+.evo__punto { stroke: none; }
+.evo__punto--viejo { fill: var(--accent); }
+.evo__punto--nuevo { fill: var(--violeta); }
+.evo__eje { font-size: 11px; fill: var(--label-3); text-anchor: middle; }
+.evo__eje--y { text-anchor: end; }
+
+.evo__leyenda { display: flex; gap: 20px; margin-top: 14px; font-size: 13px; color: var(--label-2); }
+.evo__clave { display: inline-flex; align-items: center; gap: 7px; }
+.evo__swatch { width: 18px; height: 3px; border-radius: 2px; }
+.evo__swatch--viejo { background: var(--accent); }
+.evo__swatch--nuevo { background: var(--violeta); }
+.evo__delta { font-size: 13px; margin-left: 8px; }
+.evo__delta[data-signo="mas"] { color: var(--verde); }
+.evo__delta[data-signo="menos"] { color: var(--rojo); }
+.evo__delta[data-signo="igual"] { color: var(--label-3); }
+
+.ghead__acts { display: flex; gap: 16px; align-items: baseline; }
+
+/* ----------------------------------------------------------- buscador */
+
+.buscador {
+  position: fixed; inset: 0; z-index: 50;
+  background: rgba(0, 0, 0, .45);
+  display: flex; justify-content: center;
+  padding: 12vh 16px 16px;
+}
+.buscador[hidden] { display: none; }
+.buscador__caja {
+  width: min(620px, 100%);
+  background: var(--card);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
+  align-self: flex-start;
+}
+.buscador__inp {
+  width: 100%; font: inherit; font-size: 19px;
+  padding: 18px 20px;
+  border: 0; border-bottom: 1px solid var(--sep);
+  background: transparent; color: var(--label);
+}
+.buscador__inp::placeholder { color: var(--label-3); }
+.buscador__res { max-height: 52vh; overflow-y: auto; }
+.buscador__item {
+  display: flex; width: 100%; text-align: left;
+  padding: 11px 20px; gap: 12px;
+  font: inherit; color: var(--label);
+  background: transparent; border: 0; cursor: pointer;
+}
+.buscador__item:hover, .buscador__item.is-sel { background: var(--card-hi); }
+
+/* -------------------------------------------------------------- papel */
+
+@media print {
+  .grilla { grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .buscador, #editor-materia { display: none; }
+}

@@ -24,6 +24,9 @@
   var seleccionSim = {};   // materias marcadas en el simulador
   var verTodas = false;    // el simulador muestra también las no habilitadas
   var simInicializado = false;
+  var pila = [];           // estados anteriores, para deshacer
+  var deshaciendo = false;
+  var ultimoGuardado = null;
 
   // --------------------------------------------------------------- datos
 
@@ -57,6 +60,7 @@
     if (!datos.materias[id]) datos.materias[id] = C.registroVacio();
     return datos.materias[id];
   }
+
   function estadoDe(id) { return C.estadoDe(datos.materias[id]); }
   function puedeCursar(m) { return C.puedeCursar(m, estadoDe); }
   function faltantes(m) { return C.faltantes(m, estadoDe); }
@@ -118,8 +122,37 @@
     } catch (e) { /* si no se puede migrar, arranca vacía */ }
   }
 
+  function botonDeshacer() {
+    var b = document.getElementById('btn-deshacer');
+    if (b) b.hidden = pila.length === 0;
+  }
+
+  function deshacer() {
+    if (!pila.length) return;
+    var anterior = pila.pop();
+    deshaciendo = true;
+    try {
+      adoptar(JSON.parse(anterior));
+      guardar();
+    } finally { deshaciendo = false; }
+    botonDeshacer();
+    abierta = null;
+    pintarAjustes();
+    pintarTodo();
+  }
+
   function guardar() {
     var texto = JSON.stringify(datos, null, 2);
+
+    // La pila guarda el estado ANTERIOR a este cambio. Al apilarlo acá y no en
+    // cada punto de edición, no hay forma de olvidarse en una rama nueva.
+    if (!deshaciendo && ultimoGuardado !== null && ultimoGuardado !== texto) {
+      pila.push(ultimoGuardado);
+      if (pila.length > 30) pila.shift();
+      botonDeshacer();
+    }
+    ultimoGuardado = texto;
+
     if (persistencia) {
       try {
         localStorage.setItem(CLAVE, texto);
@@ -744,13 +777,16 @@
 
   // ------------------------------------------------------------ secciones
 
-  var VISTAS = ['plan', 'correlativas', 'ajustes', 'simulador', 'critico', 'impacto'];
+  var VISTAS = ['plan', 'correlativas', 'ajustes', 'simulador', 'critico', 'impacto',
+                'evolucion', 'proyeccion'];
   // Las herramientas no son pestañas: son pantallas a las que se entra desde
   // Plan y de las que se vuelve, como una vista empujada.
   var HERRAMIENTAS = {
     simulador: 'Simulador de inscripción',
     critico: 'Camino crítico',
-    impacto: 'Ordenar por impacto'
+    impacto: 'Ordenar por impacto',
+    evolucion: 'Evolución del peso académico',
+    proyeccion: 'Proyección de egreso'
   };
 
   function irA(cual) {
@@ -772,6 +808,8 @@
     else if (cual === 'simulador') pintarSimulador();
     else if (cual === 'critico') pintarCritico();
     else if (cual === 'impacto') pintarImpacto();
+    else if (cual === 'evolucion') pintarEvolucion();
+    else if (cual === 'proyeccion') pintarProyeccion();
 
     window.scrollTo(0, 0);
   }
@@ -1174,10 +1212,232 @@
         'necesitan más de una correlativa. Mirá la columna «en total» para ver cuál pesa más a futuro.';
   }
 
+
+  // ---------------------------------------------------------- evolucion
+
+  function pintarEvolucion() {
+    var serie = C.historialPeso(activas(), datos, datos.ajustes, new Date());
+    var cont = document.getElementById('evo-grafico');
+    var tabla = document.getElementById('evo-tabla');
+    cont.textContent = '';
+    tabla.textContent = '';
+
+    if (serie.length < 2) {
+      cont.appendChild(el('p', 'vacio', serie.length
+        ? 'Con un solo ciclo cargado todavía no hay curva. Cargá el año de cada materia para ver la evolución.'
+        : 'Cargá materias con su año y acá aparece cómo se movió tu peso académico.'));
+      return;
+    }
+
+    var vals = [];
+    serie.forEach(function (p) { vals.push(p.pesoViejo, p.pesoNuevo); });
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    if (min === max) { min -= 1; max += 1; }
+
+    var NS = 'http://www.w3.org/2000/svg';
+    var W = 640, H = 230, PL = 46, PR = 14, PT = 16, PB = 30;
+    var x = function (i) { return PL + i * (W - PL - PR) / Math.max(1, serie.length - 1); };
+    var y = function (v) { return PT + (max - v) * (H - PT - PB) / (max - min); };
+
+    var svg = document.createElementNS(NS, 'svg');
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('class', 'evo');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', 'Evolución del peso académico entre ' + serie[0].ciclo +
+      ' y ' + serie[serie.length - 1].ciclo);
+
+    // La línea del cero separa lo que suma de lo que resta.
+    if (min < 0 && max > 0) {
+      var cero = document.createElementNS(NS, 'line');
+      cero.setAttribute('x1', PL); cero.setAttribute('x2', W - PR);
+      cero.setAttribute('y1', y(0)); cero.setAttribute('y2', y(0));
+      cero.setAttribute('class', 'evo__cero');
+      svg.appendChild(cero);
+    }
+
+    [['pesoViejo', 'viejo'], ['pesoNuevo', 'nuevo']].forEach(function (par) {
+      var d = serie.map(function (p, i) {
+        return (i ? 'L' : 'M') + x(i) + ',' + y(p[par[0]]);
+      }).join(' ');
+      var path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('class', 'evo__linea evo__linea--' + par[1]);
+      svg.appendChild(path);
+      serie.forEach(function (p, i) {
+        var c = document.createElementNS(NS, 'circle');
+        c.setAttribute('cx', x(i)); c.setAttribute('cy', y(p[par[0]]));
+        c.setAttribute('r', 3.5);
+        c.setAttribute('class', 'evo__punto evo__punto--' + par[1]);
+        svg.appendChild(c);
+      });
+    });
+
+    [max, min].forEach(function (v) {
+      var t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', PL - 8); t.setAttribute('y', y(v) + 4);
+      t.setAttribute('class', 'evo__eje evo__eje--y');
+      t.textContent = String(v);
+      svg.appendChild(t);
+    });
+    serie.forEach(function (p, i) {
+      var t = document.createElementNS(NS, 'text');
+      t.setAttribute('x', x(i)); t.setAttribute('y', H - 10);
+      t.setAttribute('class', 'evo__eje');
+      t.textContent = String(p.ciclo);
+      svg.appendChild(t);
+    });
+    cont.appendChild(svg);
+
+    var leyenda = el('p', 'evo__leyenda');
+    [['viejo', 'Hasta CL2026'], ['nuevo', 'Desde CL2027']].forEach(function (l) {
+      var sp = el('span', 'evo__clave');
+      var i = el('i', 'evo__swatch evo__swatch--' + l[0]);
+      i.setAttribute('aria-hidden', 'true');
+      sp.appendChild(i);
+      sp.appendChild(document.createTextNode(l[1]));
+      leyenda.appendChild(sp);
+    });
+    cont.appendChild(leyenda);
+
+    var ultimo = null;
+    serie.forEach(function (p) {
+      var fila = el('div', 'row');
+      var lab = el('span', 'row__label');
+      lab.appendChild(el('b', null, String(p.ciclo)));
+      lab.appendChild(el('span', 'row__sub', '  ' + p.aprobadas +
+        (p.aprobadas === 1 ? ' materia aprobada' : ' materias aprobadas')));
+      fila.appendChild(lab);
+      var v = el('span', 'row__value num');
+      v.appendChild(el('b', null, String(p.pesoViejo)));
+      if (ultimo !== null) {
+        var d = p.pesoViejo - ultimo;
+        var sp2 = el('span', 'evo__delta', ' ' + (d > 0 ? '+' : '') + d);
+        sp2.dataset.signo = d > 0 ? 'mas' : (d < 0 ? 'menos' : 'igual');
+        v.appendChild(sp2);
+      }
+      fila.appendChild(v);
+      tabla.appendChild(fila);
+      ultimo = p.pesoViejo;
+    });
+  }
+
+  // --------------------------------------------------------- proyeccion
+
+  function pintarProyeccion() {
+    var ritmo = parseInt(document.getElementById('proy-ritmo').value, 10) || 4;
+    document.getElementById('proy-ritmo-n').textContent = String(ritmo);
+
+    var p = C.proyeccion(obligatoriasActivas(), estadoDe, ritmo, new Date());
+    var caja = document.getElementById('proy-resultado');
+    caja.textContent = '';
+
+    if (p.cuatrimestres === 0) {
+      caja.appendChild(el('p', 'vacio', 'Ya aprobaste todas las materias del plan.'));
+      return;
+    }
+
+    var cifra = el('div', 'crit__cifra');
+    cifra.appendChild(el('span', 'crit__n num', String(p.cuatrimestres)));
+    cifra.appendChild(el('span', 'crit__u', p.cuatrimestres === 1 ? 'cuatrimestre' : 'cuatrimestres'));
+    caja.appendChild(cifra);
+
+    var res = el('p', 'crit__exp');
+    res.appendChild(document.createTextNode('Cursando ' + ritmo +
+      (ritmo === 1 ? ' materia' : ' materias') + ' por cuatrimestre, terminarías alrededor de '));
+    res.appendChild(el('b', null, String(p.anioEgreso)));
+    res.appendChild(document.createTextNode('.'));
+    caja.appendChild(res);
+
+    var det = el('p', 'crit__exp');
+    det.textContent = p.loLimita === 'ritmo'
+      ? 'Te faltan ' + p.faltaCursar + ' materias por cursar, que son ' + p.cuatriMateria +
+        ' cuatrimestres de cursada contando que las anuales ocupan dos. A ese ritmo son ' +
+        p.porRitmo + ' cuatrimestres, y las correlativas te obligan a ' + p.critico +
+        ', así que lo que manda es el ritmo: cursando más por vez, terminás antes.'
+      : 'Te faltan ' + p.faltaCursar + ' materias por cursar. A ese ritmo las cubrirías en ' +
+        p.porRitmo + ' cuatrimestres, pero la cadena de correlativas te obliga a ' + p.critico +
+        '. Lo que manda son las correlativas: cursar más materias por vez ya no te acorta la carrera.';
+    caja.appendChild(det);
+
+    if (p.pendientes > p.faltaCursar) {
+      caja.appendChild(el('p', 'sim__nota', 'Las ' + (p.pendientes - p.faltaCursar) +
+        ' materias que ya cursaste y te deben final no suman cuatrimestres: sólo hay que rendirlas.'));
+    }
+  }
+
+
+  // ----------------------------------------------------------- buscador
+
+  var busSel = 0;
+
+  function normalizar(t) {
+    return t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function abrirBuscador() {
+    document.getElementById('buscador').hidden = false;
+    var inp = document.getElementById('buscador-inp');
+    inp.value = '';
+    inp.focus();
+    busSel = 0;
+    pintarBuscador();
+  }
+
+  function cerrarBuscador() {
+    document.getElementById('buscador').hidden = true;
+  }
+
+  function resultadosBuscador() {
+    var q = normalizar(document.getElementById('buscador-inp').value.trim());
+    var lista = todas();
+    if (!q) return lista.slice(0, 8);
+    return lista.filter(function (m) {
+      return normalizar(m.nombre).indexOf(q) >= 0 ||
+             (m.sigla && normalizar(m.sigla).indexOf(q) >= 0);
+    }).slice(0, 8);
+  }
+
+  function pintarBuscador() {
+    var cont = document.getElementById('buscador-res');
+    cont.textContent = '';
+    var res = resultadosBuscador();
+    if (!res.length) {
+      cont.appendChild(el('p', 'vacio', 'Ninguna materia coincide.'));
+      return;
+    }
+    if (busSel >= res.length) busSel = res.length - 1;
+    res.forEach(function (m, i) {
+      var b = el('button', 'buscador__item' + (i === busSel ? ' is-sel' : ''));
+      b.type = 'button';
+      var izq = el('span', 'row__label');
+      izq.appendChild(el('span', 'sim__nom', m.nombre));
+      var meta = el('span', 'sim__meta');
+      meta.appendChild(punto(puedeCursar(m) ? 'var(--accent)' : colorDe(estadoDe(m.codigo))));
+      meta.appendChild(el('span', null,
+        (m.nivel ? 'Nivel ' + m.nivel : 'Electiva') + ' · ' +
+        (puedeCursar(m) ? 'podés cursarla' : ETIQUETA[estadoDe(m.codigo)].toLowerCase())));
+      izq.appendChild(meta);
+      b.appendChild(izq);
+      b.addEventListener('click', function () { elegirDelBuscador(m); });
+      cont.appendChild(b);
+    });
+  }
+
+  function elegirDelBuscador(m) {
+    cerrarBuscador();
+    abierta = m.codigo;
+    irA('plan');
+    pintarNiveles();
+    pintarElectivas();
+    var celdaSel = document.querySelector('.celda[data-id="' + m.codigo + '"], .mat[data-id="' + m.codigo + '"]');
+    if (celdaSel && celdaSel.scrollIntoView) celdaSel.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
   // ------------------------------------------------------------- arranque
 
   function iniciar() {
     cargar();
+    ultimoGuardado = JSON.stringify(datos, null, 2);
     reindexar();
 
     var tema = 'auto';
@@ -1248,6 +1508,35 @@
         window.Disco.desactivar();
       });
     }
+
+    document.getElementById('btn-deshacer').addEventListener('click', deshacer);
+    document.getElementById('btn-imprimir').addEventListener('click', function () { window.print(); });
+    document.getElementById('proy-ritmo').addEventListener('input', pintarProyeccion);
+
+    var bInp = document.getElementById('buscador-inp');
+    bInp.addEventListener('input', function () { busSel = 0; pintarBuscador(); });
+    bInp.addEventListener('keydown', function (ev) {
+      var res = resultadosBuscador();
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); busSel = Math.min(busSel + 1, res.length - 1); pintarBuscador(); }
+      else if (ev.key === 'ArrowUp') { ev.preventDefault(); busSel = Math.max(busSel - 1, 0); pintarBuscador(); }
+      else if (ev.key === 'Enter') { ev.preventDefault(); if (res[busSel]) elegirDelBuscador(res[busSel]); }
+    });
+    document.getElementById('buscador').addEventListener('click', function (ev) {
+      if (ev.target === this) cerrarBuscador();
+    });
+
+    document.addEventListener('keydown', function (ev) {
+      var enBuscador = !document.getElementById('buscador').hidden;
+      if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'k') {
+        ev.preventDefault();
+        if (enBuscador) cerrarBuscador(); else abrirBuscador();
+      } else if (ev.key === 'Escape' && enBuscador) {
+        cerrarBuscador();
+      } else if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 'z' && !enBuscador) {
+        var t = ev.target.tagName;
+        if (t !== 'INPUT' && t !== 'TEXTAREA') { ev.preventDefault(); deshacer(); }
+      }
+    });
 
     document.getElementById('btn-exportar').addEventListener('click', exportar);
     document.getElementById('btn-importar').addEventListener('click', function () {

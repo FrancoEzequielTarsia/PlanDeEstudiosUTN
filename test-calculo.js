@@ -382,6 +382,62 @@ comprobar('el conflicto nombra a la materia y a lo que requiere',
   [s3.conflictos[0].materia.codigo, s3.conflictos[0].requiere.codigo], ['082026', '082021']);
 comprobar('y el combo no es viable', s3.viable, false);
 
+// -------------------------------------------------- evolucion y proyeccion
+
+seccion('Evolución del peso académico');
+
+var datosH = { materias: {
+  '082021': ap(2023, 8), '950702': ap(2023, 7),
+  '232010': ap(2024, 9), '950701': ap(2024, 6),
+  '082025': rg(2025)
+} };
+var ajH = { anioInicio: 2023, finalesDesaprobados: 0, ausentesCiclo: 0 };
+var serie = C.historialPeso(PLAN_K23, datosH, ajH, HOY);
+
+comprobar('la serie va de 2023 a 2026', serie.map(function (p) { return p.ciclo; }),
+  [2023, 2024, 2025, 2026]);
+comprobar('en 2023 habia 2 aprobadas', serie[0].aprobadas, 2);
+comprobar('en 2024 ya son 4 (acumula)', serie[1].aprobadas, 4);
+comprobar('peso viejo de 2023 = 11x2 - 5x1 = 17', serie[0].pesoViejo, 17);
+comprobar('peso viejo de 2024 = 11x4 - 5x2 = 34', serie[1].pesoViejo, 34);
+comprobar('la regularizada de 2025 resta 7 y suma 5 de MR: 11x4 - 7 + 5 = 42',
+  serie[2].pesoNuevo, 42);
+comprobar('y en 2026 ya no suma MR, solo resta el adeudado', serie[3].pesoNuevo, 11 * 4 - 7);
+comprobar('sin datos no hay serie',
+  C.historialPeso(PLAN_K23, { materias: {} }, C.ajustesVacios(), HOY).length, 0);
+
+seccion('Proyección de egreso');
+
+// Todo el plan por delante, sin nada aprobado.
+var proyVacia = C.proyeccion(PLAN_K23.filter(function (m) { return !m.opcional; }), vacio, 4, HOY);
+comprobar('faltan las 37 obligatorias', proyVacia.pendientes, 37);
+comprobar('el ritmo nunca puede ganarle al camino critico',
+  proyVacia.cuatrimestres >= proyVacia.critico, true);
+
+// Con un ritmo altisimo, lo que limita son las correlativas.
+var proyRapida = C.proyeccion(PLAN_K23.filter(function (m) { return !m.opcional; }), vacio, 50, HOY);
+comprobar('con ritmo enorme manda el camino critico',
+  proyRapida.cuatrimestres, proyRapida.critico);
+comprobar('y lo dice', proyRapida.loLimita, 'correlativas');
+
+// Con ritmo de a una, manda el ritmo.
+var proyLenta = C.proyeccion(PLAN_K23.filter(function (m) { return !m.opcional; }), vacio, 1, HOY);
+comprobar('de a una materia manda el ritmo', proyLenta.loLimita, 'ritmo');
+comprobar('y son tantos cuatrimestres como cuatrimestres-materia',
+  proyLenta.cuatrimestres, proyLenta.cuatriMateria);
+
+// Una regularizada no vuelve a ocupar tiempo de cursada.
+var unaRegu = {}; unaRegu[PLAN_K23[0].codigo] = rg(2025);
+var proyRegu = C.proyeccion(PLAN_K23.filter(function (m) { return !m.opcional; }), estadosDe(unaRegu), 4, HOY);
+comprobar('una regularizada sigue pendiente...', proyRegu.pendientes, 37);
+comprobar('...pero ya no hay que cursarla', proyRegu.faltaCursar, 36);
+
+var todo = {};
+PLAN_K23.forEach(function (m) { todo[m.codigo] = ap(2025, 8); });
+var proyFin = C.proyeccion(PLAN_K23, estadosDe(todo), 4, HOY);
+comprobar('con todo aprobado no falta nada', proyFin.cuatrimestres, 0);
+
+
 console.log('\n' + (fallas === 0
   ? 'Todo en orden: ' + corridas + ' comprobaciones.'
   : fallas + ' de ' + corridas + ' comprobaciones fallaron.'));
