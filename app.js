@@ -1058,9 +1058,10 @@
       r.cuatri === 1 ? 'cuatrimestre como mínimo' : 'cuatrimestres como mínimo';
     document.getElementById('crit-exp').textContent = r.largo === 0
       ? 'Ya aprobaste todas las materias del plan.'
-      : 'Aunque apruebes todo lo demás en paralelo, estas ' + r.largo +
-        (r.largo === 1 ? ' materia te obliga' : ' materias te obligan') + ' a cursar ' + r.cuatri +
-        ' cuatrimestres más: cada una necesita la anterior aprobada, y las anuales ocupan dos.';
+      : 'Esta cadena de ' + r.largo + (r.largo === 1 ? ' materia' : ' materias') +
+        ' es la más larga que te queda: cada una necesita la anterior aprobada, así que no hay ' +
+        'forma de acortarla cursando en paralelo. Sólo se cuentan los cuatrimestres que te falta ' +
+        'cursar — las anuales valen dos, y las que ya cursaste no suman aunque debas el final.';
 
     var cont = document.getElementById('crit-cadena');
     cont.textContent = '';
@@ -1074,9 +1075,13 @@
         id.appendChild(el('span', 'sim__nom', m.nombre));
         var meta = el('span', 'sim__meta');
         meta.appendChild(punto(puedeCursar(m) ? 'var(--accent)' : colorDe(estadoDe(m.codigo))));
+        var e = estadoDe(m.codigo);
+        var cuesta = (e === 'regularizada' || e === 'cursando') ? 0 : (m.duracion === 'anual' ? 2 : 1);
+        var comoSuma = cuesta === 0
+          ? (e === 'regularizada' ? 'ya la cursaste, sólo debés el final' : 'ya la estás cursando')
+          : '+' + cuesta + (cuesta === 1 ? ' cuatrimestre' : ' cuatrimestres');
         meta.appendChild(el('span', null, 'Nivel ' + m.nivel + ' · ' +
-          (m.duracion === 'anual' ? 'anual' : 'cuatrimestral') + ' · ' +
-          (puedeCursar(m) ? 'podés cursarla ya' : ETIQUETA[estadoDe(m.codigo)].toLowerCase())));
+          (m.duracion === 'anual' ? 'anual' : 'cuatrimestral') + ' · ' + comoSuma));
         id.appendChild(meta);
         fila.appendChild(id);
         cont.appendChild(fila);

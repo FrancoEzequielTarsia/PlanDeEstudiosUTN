@@ -325,6 +325,23 @@ var miniAnual = [
 var cAnual = C.caminoCritico(miniAnual, estadosDe({}));
 comprobar('una anual mas una cuatrimestral son 3 cuatrimestres', cAnual.cuatri, 3);
 comprobar('aunque la cadena tenga solo 2 materias', cAnual.largo, 2);
+// Rendir un final no consume un cuatrimestre de cursada: una materia que ya
+// cursaste traba la cadena pero no la alarga.
+var miniRegu = [
+  { codigo: 'A', nombre: 'A', nivel: 1, duracion: 'anual', correlativas: [] },
+  { codigo: 'B', nombre: 'B', nivel: 2, duracion: 'cuatri', correlativas: [{ de: 'A', tipo: 'APROBAR' }] }
+];
+comprobar('con A sin cursar: 2 (anual) + 1 = 3 cuatrimestres',
+  C.caminoCritico(miniRegu, estadosDe({})).cuatri, 3);
+comprobar('con A regularizada el final no cuesta cuatrimestres, queda 1',
+  C.caminoCritico(miniRegu, estadosDe({ A: rg(2025) })).cuatri, 1);
+comprobar('pero A sigue en la cadena, porque traba',
+  C.caminoCritico(miniRegu, estadosDe({ A: rg(2025) })).largo, 2);
+comprobar('una materia en curso tampoco suma cuatrimestres',
+  C.caminoCritico(miniRegu, estadosDe({ A: { estado: 'cursando', anio: 2026 } })).cuatri, 1);
+comprobar('con A aprobada sale de la cadena',
+  C.caminoCritico(miniRegu, estadosDe({ A: ap(2025, 7) })).largo, 1);
+
 
 seccion('Simulador de inscripcion');
 

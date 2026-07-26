@@ -155,9 +155,15 @@
     var indice = {};
     materias.forEach(function (m) { indice[m.codigo] = m; });
 
-    // Una materia anual ocupa dos cuatrimestres, una cuatrimestral uno. El piso
-    // se mide en cuatrimestres, no en cantidad de materias.
-    function cuatrimestres(m) { return m.duracion === 'anual' ? 2 : 1; }
+    // Cuantos cuatrimestres de CURSADA te faltan por esta materia.
+    // Una anual ocupa dos y una cuatrimestral uno, pero solo si todavia tenes
+    // que cursarla. Si ya la cursaste y debes el final, rendirlo no te consume
+    // un cuatrimestre: te traba, pero no te cuesta tiempo de cursada. Lo mismo
+    // si la estas cursando ahora: ya la estas haciendo.
+    function cuatrimestres(m, estado) {
+      if (estado === 'regularizada' || estado === 'cursando') return 0;
+      return m.duracion === 'anual' ? 2 : 1;
+    }
 
     var memo = {};
     function desde(m) {
@@ -170,11 +176,14 @@
         var prev = indice[r.de];
         if (!prev) return;
         var s = desde(prev);
-        if (s.cuatri > mejor.cuatri) mejor = s;
+        // Ante igual cantidad de cuatrimestres gana la cadena mas larga: una
+        // materia que ya cursaste cuesta 0 pero sigue trabando, y tiene que
+        // aparecer igual en la lista.
+        if (s.cuatri > mejor.cuatri || (s.cuatri === mejor.cuatri && s.largo > mejor.largo)) mejor = s;
       });
       return (memo[m.codigo] = {
         largo: mejor.largo + 1,
-        cuatri: mejor.cuatri + cuatrimestres(m),
+        cuatri: mejor.cuatri + cuatrimestres(m, estadoPorId(m.codigo)),
         camino: mejor.camino.concat([m])
       });
     }
@@ -182,7 +191,8 @@
     var mejorGlobal = { largo: 0, cuatri: 0, camino: [] };
     materias.forEach(function (m) {
       var s = desde(m);
-      if (s.cuatri > mejorGlobal.cuatri) mejorGlobal = s;
+      if (s.cuatri > mejorGlobal.cuatri ||
+          (s.cuatri === mejorGlobal.cuatri && s.largo > mejorGlobal.largo)) mejorGlobal = s;
     });
     return mejorGlobal;
   }
