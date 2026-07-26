@@ -571,8 +571,12 @@ p { margin: 0; }
 }
 
 @media print {
-  .topbar, .ghead__act, .modal { display: none; }
+  /* En papel sólo va el plan: el resto son controles que no sirven impresos. */
+  .topbar, .ghead__act, .ghead__acts, .modal, .buscador,
+  #editor-materia, #aviso { display: none; }
+  .no-papel { display: none; }
   .card { break-inside: avoid; border: 1px solid #ccc; }
+  .wrap, .wrap--ancho { max-width: none; padding: 0; }
 }
 
 .ghead__cont {
@@ -657,6 +661,26 @@ p { margin: 0; }
 /* -------------------------------------------------------------- papel */
 
 @media print {
-  .grilla { grid-template-columns: repeat(5, 1fr); gap: 8px; }
-  .buscador, #editor-materia { display: none; }
+  /* En papel siempre se imprime claro: con el tema oscuro saldria una hoja
+     negra que gasta tinta y no se lee. */
+  :root, :root[data-tema="oscuro"], :root[data-tema="auto"] {
+    --bg: #fff; --card: #fff; --card-hi: #fff;
+    --sep: #c8c8cc; --track: #eee;
+    --label: #000; --label-2: #444; --label-3: #777;
+    --accent: #0a4ea8; --gris: #777; --naranja: #a04e00;
+    --amarillo: #7a5f00; --verde: #16702f; --violeta: #5f2f96; --rojo: #a52a22;
+  }
+
+  /* Solo va el plan: el resto son controles que impresos no sirven. */
+  .topbar, .ghead__act, .ghead__acts, .modal, .buscador,
+  #editor-materia, #aviso, .no-papel { display: none; }
+
+  .wrap, .wrap--ancho { max-width: none; padding: 0; }
+  .grilla { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+
+  /* Las columnas SI pueden partirse entre paginas: si se prohibe, la columna
+     entera salta de hoja y deja el encabezado del nivel solo y vacio. */
+  .card { border: 1px solid var(--sep); break-inside: auto; }
+  .celda, .row, .nivel__cab { break-inside: avoid; }
+  .nivel__cab { break-after: avoid; }
 }

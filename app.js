@@ -1510,7 +1510,14 @@
     }
 
     document.getElementById('btn-deshacer').addEventListener('click', deshacer);
-    document.getElementById('btn-imprimir').addEventListener('click', function () { window.print(); });
+    document.getElementById('btn-imprimir').addEventListener('click', function () {
+      // El navegador imprime lo que se ve, y el botón vive en Ajustes: sin esto
+      // saldría impresa la pantalla de Ajustes en vez del plan.
+      irA('plan');
+      abierta = null;
+      pintarNiveles();
+      setTimeout(function () { window.print(); }, 60);
+    });
     document.getElementById('proy-ritmo').addEventListener('input', pintarProyeccion);
 
     var bInp = document.getElementById('buscador-inp');
