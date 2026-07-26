@@ -292,6 +292,42 @@
     };
   }
 
+
+  /**
+   * Cuanto te destraba RENDIR el final de una materia que ya cursaste.
+   *
+   * Es distinto del impacto de cursarla: una regularizada ya habilita las
+   * correlativas de tipo REGULARIZAR, asi que lo unico que sigue trabando son
+   * las de tipo APROBAR. Y rendir no consume un cuatrimestre.
+   *
+   * En el peso academico el salto es grande y concreto: la materia pasa a
+   * contar como aprobada (+11) y deja de ser un final adeudado (+7).
+   */
+  var GANANCIA_PESO_FINAL = 18;
+
+  function impactoFinal(materia, materias, estadoPorId) {
+    var comoSi = function (id) {
+      return id === materia.codigo ? 'aprobada' : estadoPorId(id);
+    };
+    var directas = dependientes(materia.codigo, materias);
+    var desbloqueaYa = directas.filter(function (m) {
+      return !puedeCursar(m, estadoPorId) && puedeCursar(m, comoSi);
+    });
+    // Las que lo piden APROBADO son las que este final traba de verdad.
+    var trabadas = directas.filter(function (m) {
+      return (m.correlativas || []).some(function (r) {
+        return r.de === materia.codigo && r.tipo === 'APROBAR';
+      });
+    });
+    return {
+      directas: directas,
+      desbloqueaYa: desbloqueaYa,
+      trabadas: trabadas,
+      total: descendientes(materia.codigo, materias),
+      ganaPeso: GANANCIA_PESO_FINAL
+    };
+  }
+
   // --- simulacion ---------------------------------------------------------
 
   /**
@@ -457,6 +493,8 @@
     dependientes: dependientes,
     descendientes: descendientes,
     impacto: impacto,
+    impactoFinal: impactoFinal,
+    GANANCIA_PESO_FINAL: GANANCIA_PESO_FINAL,
     caminoCritico: caminoCritico,
     historialPeso: historialPeso,
     proyeccion: proyeccion,

@@ -1162,6 +1162,7 @@
     if (!cursables.length) {
       cont.appendChild(el('p', 'vacio', 'No hay ninguna materia habilitada con tu estado actual.'));
       document.getElementById('imp-pie').textContent = '';
+      pintarFinales();
       return;
     }
 
@@ -1204,6 +1205,8 @@
     });
 
     var conImpacto = filas.filter(function (f) { return f.ya > 0; }).length;
+    pintarFinales();
+
     document.getElementById('imp-pie').textContent = conImpacto
       ? 'De las ' + filas.length + ' que podés cursar, ' + conImpacto +
         (conImpacto === 1 ? ' destraba' : ' destraban') + ' algo de inmediato. ' +
@@ -1431,6 +1434,104 @@
     pintarElectivas();
     var celdaSel = document.querySelector('.celda[data-id="' + m.codigo + '"], .mat[data-id="' + m.codigo + '"]');
     if (celdaSel && celdaSel.scrollIntoView) celdaSel.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+
+
+  // ------------------------------------------------- prioridad de finales
+
+  var PRIO = { alta: 'Alta', normal: 'Normal', baja: 'Baja' };
+  var ORDEN_PRIO = { alta: 0, normal: 1, baja: 2 };
+
+  function prioridadDe(id) {
+    var r = datos.materias[id];
+    return (r && r.prioridad) || 'normal';
+  }
+
+  function ciclarPrioridad(id) {
+    var actual = prioridadDe(id);
+    var siguiente = actual === 'normal' ? 'alta' : (actual === 'alta' ? 'baja' : 'normal');
+    rec(id).prioridad = siguiente === 'normal' ? null : siguiente;
+    guardar();
+    pintarImpacto();
+  }
+
+  function pintarFinales() {
+    var cont = document.getElementById('fin-lista');
+    var pie = document.getElementById('fin-pie');
+    cont.textContent = '';
+
+    var adeudados = activas().filter(function (m) {
+      return estadoDe(m.codigo) === 'regularizada';
+    });
+
+    if (!adeudados.length) {
+      cont.appendChild(el('p', 'vacio', 'No debés ningún final: todas las materias que cursaste ya están aprobadas.'));
+      pie.textContent = '';
+      return;
+    }
+
+    var filas = adeudados.map(function (m) {
+      var i = C.impactoFinal(m, activas(), estadoDe);
+      return { m: m, ya: i.desbloqueaYa.length, traba: i.trabadas.length,
+               total: i.total.length, lista: i.desbloqueaYa };
+    });
+    filas.sort(function (a, b) {
+      return (ORDEN_PRIO[prioridadDe(a.m.codigo)] - ORDEN_PRIO[prioridadDe(b.m.codigo)]) ||
+             (b.ya - a.ya) || (b.traba - a.traba) || (b.total - a.total);
+    });
+
+    filas.forEach(function (f) {
+      var fila = el('div', 'row imp__fila');
+
+      var id = el('span', 'row__label');
+      id.appendChild(el('span', 'sim__nom', f.m.nombre));
+      var meta = el('span', 'sim__meta');
+      meta.appendChild(punto('var(--amarillo)'));
+      meta.appendChild(el('span', null, (f.m.nivel ? 'Nivel ' + f.m.nivel : 'Electiva') +
+        ' · +' + C.GANANCIA_PESO_FINAL + ' al peso'));
+      if (f.lista.length) {
+        meta.appendChild(el('span', 'imp__quienes',
+          '→ destraba ' + f.lista.map(function (x) { return x.nombre; }).join(', ')));
+      } else if (f.traba) {
+        meta.appendChild(el('span', 'imp__quienes',
+          '→ ' + f.traba + (f.traba === 1 ? ' materia lo pide' : ' materias lo piden') +
+          ' aprobado, pero les falta algo más'));
+      }
+      id.appendChild(meta);
+      fila.appendChild(id);
+
+      var prio = prioridadDe(f.m.codigo);
+      var bp = el('button', 'prio');
+      bp.type = 'button';
+      bp.dataset.p = prio;
+      bp.textContent = PRIO[prio];
+      bp.setAttribute('aria-label', 'Prioridad de ' + f.m.nombre + ': ' + PRIO[prio] + '. Tocá para cambiarla.');
+      bp.addEventListener('click', function () { ciclarPrioridad(f.m.codigo); });
+      fila.appendChild(bp);
+
+      var nums = el('span', 'imp__nums');
+      var a = el('span', 'imp__n');
+      a.appendChild(el('b', 'num', String(f.ya)));
+      a.appendChild(el('small', null, 'destraba'));
+      if (f.ya > 0) a.dataset.destaca = '1';
+      nums.appendChild(a);
+      var b = el('span', 'imp__n');
+      b.appendChild(el('b', 'num', String(f.total)));
+      b.appendChild(el('small', null, 'en total'));
+      nums.appendChild(b);
+      fila.appendChild(nums);
+
+      cont.appendChild(fila);
+    });
+
+    var conImpacto = filas.filter(function (f) { return f.ya > 0; }).length;
+    pie.textContent = 'Debés ' + filas.length + (filas.length === 1 ? ' final' : ' finales') +
+      '. Cada uno que apruebes suma ' + C.GANANCIA_PESO_FINAL +
+      ' puntos al peso nuevo (+11 por aprobada y +7 por dejar de adeudarlo) y no te consume ' +
+      'ningún cuatrimestre. ' +
+      (conImpacto
+        ? 'Los de arriba son los que además destraban materias.'
+        : 'Ninguno destraba una materia por sí solo todavía.');
   }
 
   // ------------------------------------------------------------- arranque

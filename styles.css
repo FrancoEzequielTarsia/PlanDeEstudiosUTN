@@ -684,3 +684,15 @@ p { margin: 0; }
   .celda, .row, .nivel__cab { break-inside: avoid; }
   .nivel__cab { break-after: avoid; }
 }
+
+/* Prioridad manual de un final. Cicla Normal → Alta → Baja. */
+.prio {
+  font: inherit; font-size: 12px; font-weight: 600;
+  padding: 4px 10px; border-radius: 20px;
+  border: 1px solid var(--sep); background: transparent;
+  color: var(--label-2); cursor: pointer; flex-shrink: 0;
+  letter-spacing: .02em;
+}
+.prio:hover { border-color: var(--label-3); color: var(--label); }
+.prio[data-p="alta"] { border-color: var(--rojo); color: var(--rojo); }
+.prio[data-p="baja"] { color: var(--label-3); }
