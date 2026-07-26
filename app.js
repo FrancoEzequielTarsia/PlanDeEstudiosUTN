@@ -26,11 +26,25 @@
 
   // --------------------------------------------------------------- datos
 
-  // El Seminario Integrador no hace falta para el título de grado: no entra en
-  // el total ni en el camino crítico, pero se puede cargar igual.
-  var OBLIGATORIAS = PLAN_K23.filter(function (m) { return !m.opcional; });
+  // Materias opcionales (hoy sólo el Seminario Integrador, que se cursa nada
+  // más si querés el título intermedio). Mientras no digas que la vas a cursar,
+  // queda anulada: se muestra en la grilla para que puedas decidir, pero no
+  // participa de nada — ni del total, ni del peso, ni del camino crítico.
+  function anulada(m) {
+    if (!m.opcional) return false;
+    var r = datos.materias[m.codigo];
+    return !(r && r.cursare === true);
+  }
 
   function todas() { return PLAN_K23.concat(datos.electivas); }
+
+  // Lo que de verdad cuenta para tu carrera.
+  function activas() {
+    return PLAN_K23.filter(function (m) { return !anulada(m); }).concat(datos.electivas);
+  }
+  function obligatoriasActivas() {
+    return PLAN_K23.filter(function (m) { return !anulada(m); });
+  }
 
   var indice = {};
   function reindexar() {
@@ -157,7 +171,7 @@
   // ------------------------------------------------------------ resumen
 
   function pintarResumen() {
-    var m = C.metricas(todas(), datos, datos.ajustes, new Date());
+    var m = C.metricas(activas(), datos, datos.ajustes, new Date());
     var g = function (id) { return document.getElementById(id); };
     var n = function (v) { return v === null || v === undefined ? '—' : String(v); };
 
@@ -165,8 +179,8 @@
     g('peso-nuevo').textContent = m.hayDatos ? String(m.pesoNuevo) : '—';
     g('promedio').textContent = m.promedio === null ? '—' : m.promedio.toFixed(2);
     g('promedio-pond').textContent = m.promedioPonderado === null ? '—' : m.promedioPonderado.toFixed(2);
-    g('aprobadas').textContent = m.mApTotal + ' / ' + OBLIGATORIAS.length;
-    g('habilitadas').textContent = n(todas().filter(puedeCursar).length);
+    g('aprobadas').textContent = m.mApTotal + ' / ' + obligatoriasActivas().length;
+    g('habilitadas').textContent = n(activas().filter(puedeCursar).length);
 
     g('formulas').textContent = m.hayDatos
       ? 'Hasta CL2026: 11×' + m.mApTotal + ' − 5×' + m.aniosCarrera + ' − 3×' + m.finalesDesaprobados +
@@ -214,6 +228,42 @@
   function editor(m) {
     var r = rec(m.codigo);
     var caja = el('div', 'edit');
+
+    // Las opcionales se resuelven antes que nada: si no la vas a cursar, no hay
+    // estado que cargar y la materia queda fuera de todo el cálculo.
+    if (m.opcional) {
+      caja.appendChild(el('span', 'edit__lab', '¿La vas a cursar?'));
+      var sino = el('div', 'edit__estados');
+      sino.setAttribute('role', 'radiogroup');
+      sino.setAttribute('aria-label', '¿Vas a cursar ' + m.nombre + '?');
+      [{ v: true, t: 'Sí, la voy a cursar' }, { v: false, t: 'No' }].forEach(function (o) {
+        var b = el('button', 'opt');
+        b.type = 'button';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', String((r.cursare === true) === o.v));
+        b.textContent = o.t;
+        b.addEventListener('click', function () {
+          r.cursare = o.v;
+          // Al anularla se limpia lo cargado: no puede quedar una nota fantasma
+          // sumando en un cálculo del que la materia ya no participa.
+          if (!o.v) { r.estado = 'sin-cursar'; r.nota = null; r.anio = null; }
+          guardar();
+          pintarTodo();
+        });
+        sino.appendChild(b);
+      });
+      caja.appendChild(sino);
+
+      var expl = el('p', 'edit__nota');
+      expl.appendChild(el('b', null, 'Materia opcional. '));
+      expl.appendChild(document.createTextNode(
+        'Sólo hace falta si querés el título intermedio. Mientras digas que no, queda anulada: ' +
+        'no cuenta en el total del plan, ni en el peso académico, ni en el camino crítico, y no ' +
+        'aparece en el mapa ni en las herramientas.'));
+      caja.appendChild(expl);
+
+      if (anulada(m)) return caja;
+    }
 
     caja.appendChild(el('span', 'edit__lab', 'Estado'));
     var ops = el('div', 'edit__estados');
@@ -318,15 +368,6 @@
     }
     caja.appendChild(nota);
 
-    if (m.opcional) {
-      var op = el('p', 'edit__nota');
-      op.appendChild(el('b', null, 'Sólo para el título intermedio. '));
-      op.appendChild(document.createTextNode(
-        'No hace falta para recibirte de ingeniero, así que no cuenta en el total del plan ni en ' +
-        'el camino crítico. Si la cursás igual, suma al peso académico como cualquier otra.'));
-      caja.appendChild(op);
-    }
-
     if ((m.correlativas || []).length || C.dependientes(m.codigo, todas()).length) {
       var ir = el('button', 'edit__ir', 'Ver en el mapa de correlativas ›');
       ir.type = 'button';
@@ -378,18 +419,25 @@
 
     b.appendChild(el('span', 'celda__nom', m.nombre));
 
+    var esAnulada = anulada(m);
+    if (esAnulada) b.classList.add('is-anulada');
+
     var pie = el('span', 'celda__pie');
     var pt = el('i', 'chip__pt');
     pt.setAttribute('aria-hidden', 'true');
-    pt.style.background = puede ? 'var(--accent)' : colorDe(estado);
+    pt.style.background = esAnulada ? 'var(--label-3)' : (puede ? 'var(--accent)' : colorDe(estado));
     pie.appendChild(pt);
-    pie.appendChild(el('span', null, puede ? 'Podés cursarla' : ETIQUETA[estado]));
+    pie.appendChild(el('span', null,
+      esAnulada ? 'Opcional · no la vas a cursar'
+                : (puede ? 'Podés cursarla' : ETIQUETA[estado])));
     if (r && typeof r.nota === 'number') pie.appendChild(el('span', 'celda__nota', String(r.nota)));
     b.appendChild(pie);
 
-    b.setAttribute('aria-label', m.nombre + '. ' + ETIQUETA[estado] +
-      (puede ? ', podés cursarla' : '') +
-      (r && typeof r.nota === 'number' ? ', nota ' + r.nota : ''));
+    b.setAttribute('aria-label', esAnulada
+      ? m.nombre + '. Materia opcional que decidiste no cursar.'
+      : m.nombre + '. ' + ETIQUETA[estado] +
+        (puede ? ', podés cursarla' : '') +
+        (r && typeof r.nota === 'number' ? ', nota ' + r.nota : ''));
     b.setAttribute('aria-expanded', String(abierta === m.codigo));
     return b;
   }
@@ -479,7 +527,7 @@
     svg.textContent = '';
 
     var porNivel = [1, 2, 3, 4, 5].map(function (n) {
-      return PLAN_K23.filter(function (m) { return m.nivel === n; });
+      return PLAN_K23.filter(function (m) { return m.nivel === n && !anulada(m); });
     });
     // Las electivas van en su propia columna: no tienen correlativas, pero son
     // parte del plan y tienen que verse en el mapa.
@@ -832,7 +880,7 @@
     var lista = document.getElementById('sim-lista');
     lista.textContent = '';
 
-    var candidatas = todas().filter(function (m) {
+    var candidatas = activas().filter(function (m) {
       return verTodas ? !C.APROBADAS[estadoDe(m.codigo)] : puedeCursar(m);
     });
 
@@ -884,7 +932,7 @@
       return;
     }
 
-    var s = C.simular(todas(), datos, datos.ajustes, elegidas, new Date());
+    var s = C.simular(activas(), datos, datos.ajustes, elegidas, new Date());
 
     var v = el('div', 'veredicto');
     v.dataset.ok = s.viable ? '1' : '0';
@@ -965,7 +1013,7 @@
   // ----------------------------------------------------- camino critico
 
   function pintarCritico() {
-    var r = C.caminoCritico(OBLIGATORIAS, estadoDe);
+    var r = C.caminoCritico(obligatoriasActivas(), estadoDe);
 
     document.getElementById('crit-n').textContent = r.largo || '0';
     document.getElementById('crit-u').textContent =
@@ -1027,7 +1075,7 @@
     var cont = document.getElementById('imp-lista');
     cont.textContent = '';
 
-    var cursables = todas().filter(puedeCursar);
+    var cursables = activas().filter(puedeCursar);
     if (!cursables.length) {
       cont.appendChild(el('p', 'vacio', 'No hay ninguna materia habilitada con tu estado actual.'));
       document.getElementById('imp-pie').textContent = '';
@@ -1035,7 +1083,7 @@
     }
 
     var filas = cursables.map(function (m) {
-      var i = C.impacto(m, todas(), estadoDe);
+      var i = C.impacto(m, activas(), estadoDe);
       return { m: m, ya: i.destrabaYa.length, total: i.total.length, lista: i.destrabaYa };
     });
     filas.sort(function (a, b) {

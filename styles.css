@@ -579,3 +579,8 @@ p { margin: 0; }
   font-weight: 500; letter-spacing: 0; text-transform: none;
   color: var(--label-3); margin-left: 6px;
 }
+
+/* Materia opcional que decidiste no cursar: sigue visible para poder cambiar de
+   idea, pero se lee como apagada. */
+.celda.is-anulada .celda__nom { color: var(--label-2); text-decoration: line-through; }
+.celda.is-anulada .celda__pie { color: var(--label-3); }
