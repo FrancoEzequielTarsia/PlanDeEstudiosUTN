@@ -280,7 +280,7 @@ comprobar('con Logica y Sistemas y Procesos ya aprobadas, Algoritmos destraba 3'
 seccion('Camino critico');
 
 var critVacio = C.caminoCritico(PLAN_K23, estadosDe({}));
-comprobar('sin nada aprobado el piso es de 5 cuatrimestres', critVacio.largo, 5);
+comprobar('sin nada aprobado la cadena tiene 5 materias', critVacio.largo, 5);
 comprobar('y el camino tiene 5 materias', critVacio.camino.length, 5);
 comprobar('cada eslabon es correlativa del siguiente',
   critVacio.camino.every(function (m, i) {
@@ -309,13 +309,22 @@ var mini = [
   { codigo: 'C', nombre: 'C', nivel: 3, correlativas: [{ de: 'B', tipo: 'REGULARIZAR' }] },
   { codigo: 'D', nombre: 'D', nivel: 2, correlativas: [] }
 ];
-comprobar('cadena A-B-C: el piso es 3', C.caminoCritico(mini, estadosDe({})).largo, 3);
+comprobar('cadena A-B-C de cuatrimestrales: el piso es 3', C.caminoCritico(mini, estadosDe({})).cuatri, 3);
 comprobar('y el camino es A, B, C',
   C.caminoCritico(mini, estadosDe({})).camino.map(function (m) { return m.codigo; }), ['A', 'B', 'C']);
 comprobar('con A aprobada el piso baja a 2',
-  C.caminoCritico(mini, estadosDe({ A: ap(2025, 7) })).largo, 2);
+  C.caminoCritico(mini, estadosDe({ A: ap(2025, 7) })).cuatri, 2);
 comprobar('con A y B aprobadas baja a 1',
-  C.caminoCritico(mini, estadosDe({ A: ap(2025, 7), B: ap(2025, 7) })).largo, 1);
+  C.caminoCritico(mini, estadosDe({ A: ap(2025, 7), B: ap(2025, 7) })).cuatri, 1);
+
+// Una materia anual ocupa dos cuatrimestres.
+var miniAnual = [
+  { codigo: 'A', nombre: 'A', nivel: 1, duracion: 'anual', correlativas: [] },
+  { codigo: 'B', nombre: 'B', nivel: 2, duracion: 'cuatri', correlativas: [{ de: 'A', tipo: 'REGULARIZAR' }] }
+];
+var cAnual = C.caminoCritico(miniAnual, estadosDe({}));
+comprobar('una anual mas una cuatrimestral son 3 cuatrimestres', cAnual.cuatri, 3);
+comprobar('aunque la cadena tenga solo 2 materias', cAnual.largo, 2);
 
 seccion('Simulador de inscripcion');
 

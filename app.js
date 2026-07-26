@@ -1015,13 +1015,14 @@
   function pintarCritico() {
     var r = C.caminoCritico(obligatoriasActivas(), estadoDe);
 
-    document.getElementById('crit-n').textContent = r.largo || '0';
+    document.getElementById('crit-n').textContent = r.cuatri || '0';
     document.getElementById('crit-u').textContent =
-      r.largo === 1 ? 'cuatrimestre como mínimo' : 'cuatrimestres como mínimo';
+      r.cuatri === 1 ? 'cuatrimestre como mínimo' : 'cuatrimestres como mínimo';
     document.getElementById('crit-exp').textContent = r.largo === 0
       ? 'Ya aprobaste todas las materias del plan.'
-      : 'Aunque apruebes todo lo demás en paralelo, esta cadena te obliga a cursar ' + r.largo +
-        ' cuatrimestres más: cada materia necesita la anterior aprobada.';
+      : 'Aunque apruebes todo lo demás en paralelo, estas ' + r.largo +
+        (r.largo === 1 ? ' materia te obliga' : ' materias te obligan') + ' a cursar ' + r.cuatri +
+        ' cuatrimestres más: cada una necesita la anterior aprobada, y las anuales ocupan dos.';
 
     var cont = document.getElementById('crit-cadena');
     cont.textContent = '';
@@ -1036,6 +1037,7 @@
         var meta = el('span', 'sim__meta');
         meta.appendChild(punto(puedeCursar(m) ? 'var(--accent)' : colorDe(estadoDe(m.codigo))));
         meta.appendChild(el('span', null, 'Nivel ' + m.nivel + ' · ' +
+          (m.duracion === 'anual' ? 'anual' : 'cuatrimestral') + ' · ' +
           (puedeCursar(m) ? 'podés cursarla ya' : ETIQUETA[estadoDe(m.codigo)].toLowerCase())));
         id.appendChild(meta);
         fila.appendChild(id);

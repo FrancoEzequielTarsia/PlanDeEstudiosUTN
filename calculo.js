@@ -155,24 +155,34 @@
     var indice = {};
     materias.forEach(function (m) { indice[m.codigo] = m; });
 
+    // Una materia anual ocupa dos cuatrimestres, una cuatrimestral uno. El piso
+    // se mide en cuatrimestres, no en cantidad de materias.
+    function cuatrimestres(m) { return m.duracion === 'anual' ? 2 : 1; }
+
     var memo = {};
     function desde(m) {
       if (memo[m.codigo]) return memo[m.codigo];
-      if (APROBADAS[estadoPorId(m.codigo)]) return (memo[m.codigo] = { largo: 0, camino: [] });
-      var mejor = { largo: 0, camino: [] };
+      if (APROBADAS[estadoPorId(m.codigo)]) {
+        return (memo[m.codigo] = { largo: 0, cuatri: 0, camino: [] });
+      }
+      var mejor = { largo: 0, cuatri: 0, camino: [] };
       (m.correlativas || []).forEach(function (r) {
         var prev = indice[r.de];
         if (!prev) return;
         var s = desde(prev);
-        if (s.largo > mejor.largo) mejor = s;
+        if (s.cuatri > mejor.cuatri) mejor = s;
       });
-      return (memo[m.codigo] = { largo: mejor.largo + 1, camino: mejor.camino.concat([m]) });
+      return (memo[m.codigo] = {
+        largo: mejor.largo + 1,
+        cuatri: mejor.cuatri + cuatrimestres(m),
+        camino: mejor.camino.concat([m])
+      });
     }
 
-    var mejorGlobal = { largo: 0, camino: [] };
+    var mejorGlobal = { largo: 0, cuatri: 0, camino: [] };
     materias.forEach(function (m) {
       var s = desde(m);
-      if (s.largo > mejorGlobal.largo) mejorGlobal = s;
+      if (s.cuatri > mejorGlobal.cuatri) mejorGlobal = s;
     });
     return mejorGlobal;
   }
