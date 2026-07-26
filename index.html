@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plan K23</title>
+<meta name="description" content="Seguimiento del plan de estudios K23 de Ingeniería en Sistemas de Información (UTN FRBA): estado de cada materia, peso académico, promedios y mapa de correlativas.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#vista">Ir al contenido</a>
+
+<header class="topbar">
+  <div class="topbar__in">
+    <div class="topbar__izq">
+      <button type="button" class="volver" id="btn-volver" hidden>‹ Plan</button>
+      <h1 class="topbar__title" id="topbar-title">Plan K23</h1>
+    </div>
+    <nav class="seg" id="seg" role="tablist" aria-label="Secciones">
+      <button type="button" class="seg__btn" role="tab" id="tab-plan"
+              aria-selected="true" aria-controls="vista-plan">Plan</button>
+      <button type="button" class="seg__btn" role="tab" id="tab-correlativas"
+              aria-selected="false" aria-controls="vista-correlativas">Correlativas</button>
+      <button type="button" class="seg__btn" role="tab" id="tab-ajustes"
+              aria-selected="false" aria-controls="vista-ajustes">Ajustes</button>
+    </nav>
+  </div>
+</header>
+
+<main id="vista">
+
+  <!-- ------------------------------------------------------------ PLAN -->
+  <section class="wrap wrap--ancho" id="vista-plan" role="tabpanel" aria-labelledby="tab-plan">
+
+    <p class="aviso" id="aviso" hidden role="status"></p>
+
+    <h2 class="ghead">Resumen</h2>
+    <div class="card">
+      <div class="row">
+        <span class="row__label">Peso académico <span class="row__sub">hasta CL2026</span></span>
+        <span class="row__value num" id="peso-viejo">—</span>
+      </div>
+      <div class="row">
+        <span class="row__label">Peso académico <span class="row__sub">desde CL2027</span></span>
+        <span class="row__value num" id="peso-nuevo">—</span>
+      </div>
+      <div class="row">
+        <span class="row__label">Promedio</span>
+        <span class="row__value num" id="promedio">—</span>
+      </div>
+      <div class="row">
+        <span class="row__label">Promedio ponderado <span class="row__sub">Ord. 1549</span></span>
+        <span class="row__value num" id="promedio-pond">—</span>
+      </div>
+      <div class="row">
+        <span class="row__label">Materias aprobadas</span>
+        <span class="row__value num" id="aprobadas">—</span>
+      </div>
+      <div class="row">
+        <span class="row__label">Podés cursar</span>
+        <span class="row__value num accent" id="habilitadas">—</span>
+      </div>
+    </div>
+    <p class="gfoot" id="formulas"></p>
+
+    <h2 class="ghead">Herramientas</h2>
+    <div class="card">
+      <button type="button" class="row row--btn" data-herr="simulador">
+        <span class="row__label">Simulador de inscripción
+          <span class="row__sub">Probá una combinación y mirá cómo queda tu peso</span></span>
+        <span class="row__value chevron" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="row row--btn" data-herr="critico">
+        <span class="row__label">Camino crítico
+          <span class="row__sub">Cuántos cuatrimestres te faltan como mínimo</span></span>
+        <span class="row__value chevron" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="row row--btn" data-herr="impacto">
+        <span class="row__label">Ordenar por impacto
+          <span class="row__sub">Qué materia te destraba más si la aprobás</span></span>
+        <span class="row__value chevron" aria-hidden="true">›</span>
+      </button>
+    </div>
+    <p class="gfoot">Son de sólo lectura: te muestran cómo quedarías, sin tocar lo que cargaste.</p>
+
+    <h2 class="ghead">
+      Materias
+      <button type="button" class="ghead__act" id="btn-filtro" aria-pressed="false">Sólo las que podés cursar</button>
+    </h2>
+    <div class="grilla" id="niveles"></div>
+    <div id="editor-materia"></div>
+
+    <h2 class="ghead">
+      Electivas <span class="ghead__cont" id="electivas-cupo"></span>
+      <button type="button" class="ghead__act" id="btn-electiva">Agregar</button>
+    </h2>
+    <div class="card" id="electivas"></div>
+    <p class="gfoot">El plan pide 3 electivas de 3.º/4.º nivel. Las 5 de 5.º nivel todavía no están
+      cargadas. El listado puede estar incompleto: podés agregar una que no figure escribiendo su
+      nombre.</p>
+
+  </section>
+
+  <!-- ---------------------------------------------------- CORRELATIVAS -->
+  <section class="wrap wrap--mapa" id="vista-correlativas" role="tabpanel" aria-labelledby="tab-correlativas" hidden>
+
+    <h2 class="ghead">Mapa del plan</h2>
+    <div class="card card--mapa">
+      <div class="mapa__barra">
+        <p class="mapa__pista" id="mapa-pista">Tocá una materia para ver su cadena.</p>
+        <span class="mapa__claves">
+          <span class="clave">
+            <svg class="clave__sv" viewBox="0 0 34 8" aria-hidden="true">
+              <line x1="1" y1="4" x2="33" y2="4" stroke="currentColor" stroke-width="2"/>
+            </svg>Línea llena: regularizar</span>
+          <span class="clave">
+            <svg class="clave__sv" viewBox="0 0 34 8" aria-hidden="true">
+              <line x1="1" y1="4" x2="33" y2="4" stroke="currentColor" stroke-width="2" stroke-dasharray="5 4" stroke-linecap="round"/>
+            </svg>Punteada: aprobar</span>
+        </span>
+      </div>
+      <div class="mapa__scroll">
+        <svg class="mapa" id="mapa" role="img" aria-labelledby="mapa-titulo"></svg>
+        <span class="sr-only" id="mapa-titulo">Mapa de correlativas del plan K23</span>
+      </div>
+    </div>
+
+    <h2 class="ghead">Detalle</h2>
+    <div id="detalle"></div>
+
+  </section>
+
+  <!-- --------------------------------------------------------- AJUSTES -->
+  <section class="wrap" id="vista-ajustes" role="tabpanel" aria-labelledby="tab-ajustes" hidden>
+
+    <h2 class="ghead">Apariencia</h2>
+    <div class="card">
+      <div class="row">
+        <span class="row__label">Tema</span>
+        <span class="seg seg--mini" id="seg-tema" role="radiogroup" aria-label="Tema">
+          <button type="button" class="seg__btn" role="radio" data-tema="auto" aria-checked="true">Automático</button>
+          <button type="button" class="seg__btn" role="radio" data-tema="claro" aria-checked="false">Claro</button>
+          <button type="button" class="seg__btn" role="radio" data-tema="oscuro" aria-checked="false">Oscuro</button>
+        </span>
+      </div>
+    </div>
+
+    <h2 class="ghead">Datos del cálculo</h2>
+    <div class="card">
+      <label class="row">
+        <span class="row__label">Año de inicio de la carrera</span>
+        <input class="row__input num" type="number" id="aj-anio" min="1990" max="2100" step="1" placeholder="—">
+      </label>
+      <label class="row">
+        <span class="row__label">Finales desaprobados</span>
+        <input class="row__input num" type="number" id="aj-desaprobados" min="0" max="99" step="1" value="0">
+      </label>
+      <label class="row">
+        <span class="row__label">Finales ausentes <span class="row__sub" id="aj-ciclo-label">este ciclo</span></span>
+        <input class="row__input num" type="number" id="aj-ausentes" min="0" max="99" step="1" value="0">
+      </label>
+    </div>
+    <p class="gfoot">Estos tres valores no se pueden deducir del estado de una materia, pero son
+      términos de las fórmulas oficiales. Si dejás los contadores en cero, el peso académico va a
+      dar más alto que el de SIGA. El año de inicio, si lo dejás vacío, se toma del año más viejo
+      que hayas cargado. Los <b>finales adeudados</b> no se cargan acá: salen solos de las materias
+      que marcaste como Regularizada.</p>
+
+    <h2 class="ghead">Copia en disco</h2>
+    <div class="card">
+      <button type="button" class="row row--btn" id="btn-disco">
+        <span class="row__label" id="disco-label">Guardar una copia en un archivo
+          <span class="row__sub" id="disco-sub">Elegí dónde y la app lo reescribe sola en cada cambio</span></span>
+        <span class="row__value" id="disco-estado">Configurar</span>
+      </button>
+      <button type="button" class="row row--btn row--peligro" id="btn-disco-off" hidden>
+        <span class="row__label">Desactivar la copia en disco</span>
+      </button>
+    </div>
+    <p class="gfoot" id="disco-pie">Además de guardarse en este navegador, tus datos quedan en un
+      archivo tuyo. Podés elegir cualquier carpeta, por ejemplo en el disco D.</p>
+
+    <h2 class="ghead">Tus datos</h2>
+    <div class="card">
+      <button type="button" class="row row--btn" id="btn-exportar">
+        <span class="row__label">Exportar un respaldo</span>
+        <span class="row__value">JSON</span>
+      </button>
+      <button type="button" class="row row--btn" id="btn-importar">
+        <span class="row__label">Importar un respaldo</span>
+        <span class="row__value">JSON</span>
+      </button>
+      <button type="button" class="row row--btn row--peligro" id="btn-reiniciar">
+        <span class="row__label">Borrar todo</span>
+      </button>
+      <input type="file" id="file-importar" accept="application/json,.json" hidden>
+    </div>
+    <p class="gfoot">Los datos viven sólo en este navegador. Exportá el JSON para respaldarlos o
+      llevarlos a otra máquina.</p>
+
+    <h2 class="ghead">Cómo se calcula</h2>
+    <div class="card">
+      <div class="prosa">
+        <p><b>Peso académico hasta CL2026</b><br>
+          <code>11 × aprobadas − 5 × años de carrera − 3 × finales desaprobados</code></p>
+        <p><b>Peso académico desde CL2027</b> (resolución 2902/25)<br>
+          <code>11 × MAp_total − 7 × FAd_total − 19 × FAu_ciclo − 17 × MAb_ciclo + 5 × MR_ciclo</code></p>
+        <p><b>Nota ponderada</b> (Ordenanza 1549): sólo se aplica a notas de ciclos lectivos
+          anteriores a 2017. Desde 2017 la nota ponderada es igual a la original, así que los dos
+          promedios coinciden.</p>
+        <p><b>Ciclo lectivo</b>: arranca el 15 de marzo. Una fecha anterior cuenta para el año
+          anterior.</p>
+        <p><b>Los estados y el peso</b>: <i>Regularizada</i> significa que aprobaste la cursada
+          pero <b>debés el final</b>. No cuenta como materia aprobada: al contrario, suma un final
+          adeudado, que en la fórmula nueva resta 7. <i>Aprobada</i> (rendiste y aprobaste el
+          final) y <i>Promocionada</i> sí cuentan como aprobadas y suman 11.</p>
+        <p><b>Correlativas</b>: el mapa distingue entre <i>regularizar</i> y <i>aprobar</i> una
+          materia previa, y la distinción vale. Para las de tipo <i>regularizar</i> alcanza con
+          tenerla Regularizada; para las de tipo <i>aprobar</i> hace falta tenerla Aprobada o
+          Promocionada.</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ------------------------------------------------------ SIMULADOR -->
+  <section class="wrap" id="vista-simulador" hidden>
+    <div class="card herr__panel">
+      <div class="sim__cab">
+        <p class="sim__pregunta">¿Qué me anoto el cuatrimestre que viene?</p>
+        <p class="sim__ayuda" id="sim-ayuda"></p>
+      </div>
+      <div class="sim__lista" id="sim-lista"></div>
+      <label class="row sim__todas">
+        <input type="checkbox" id="sim-todas">
+        <span class="row__label">Mostrar también las que todavía no puedo cursar</span>
+      </label>
+    </div>
+    <div class="card herr__panel" id="sim-resultado"></div>
+  </section>
+
+  <!-- --------------------------------------------------- CAMINO CRITICO -->
+  <section class="wrap" id="vista-critico" hidden>
+    <div class="card herr__panel">
+      <div class="crit__cifra">
+        <span class="crit__n num" id="crit-n">—</span>
+        <span class="crit__u" id="crit-u">cuatrimestres como mínimo</span>
+      </div>
+      <p class="crit__exp" id="crit-exp"></p>
+    </div>
+
+    <h2 class="ghead">La cadena</h2>
+    <div class="card" id="crit-cadena"></div>
+    <p class="gfoot">Cada materia de esta lista es correlativa de la siguiente, así que no hay
+      forma de cursar dos de ellas en el mismo cuatrimestre. Por eso su largo es el piso de
+      cuatrimestres que te faltan, por más materias que apruebes en paralelo.</p>
+
+    <h2 class="ghead">Lo que no podés seguir pateando</h2>
+    <div class="card" id="crit-urgente"></div>
+  </section>
+
+  <!-- ---------------------------------------------------------- IMPACTO -->
+  <section class="wrap" id="vista-impacto" hidden>
+    <div class="card herr__panel">
+      <p class="sim__pregunta">De lo que podés cursar, ¿qué te conviene priorizar?</p>
+      <p class="sim__ayuda">Ordenadas por cuántas materias destrabás al aprobarlas. «Ahora»
+        son las que quedan habilitadas de inmediato; «en total» es todo lo que depende de ella
+        más adelante en el plan.</p>
+    </div>
+    <div class="card" id="imp-lista"></div>
+    <p class="gfoot" id="imp-pie"></p>
+  </section>
+
+</main>
+
+<dialog class="modal" id="modal-electiva">
+  <form method="dialog" class="modal__in">
+    <h2 class="modal__title">Agregar una electiva</h2>
+    <label class="modal__lab" for="el-sel">Del listado del plan</label>
+    <select id="el-sel" class="campo"></select>
+    <label class="modal__lab" for="el-otra">O escribí otra</label>
+    <input id="el-otra" class="campo" type="text" placeholder="Nombre de la electiva">
+    <div class="modal__pie">
+      <button type="submit" value="cancel" class="bt">Cancelar</button>
+      <button type="submit" value="ok" class="bt bt--go">Agregar</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="plan.js"></script>
+<script src="calculo.js"></script>
+<script src="disco.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
