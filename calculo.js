@@ -328,6 +328,118 @@
     };
   }
 
+
+  /**
+   * Cuantos cuatrimestres de carrera cuelgan DETRAS de esta materia: la cadena
+   * mas larga que arranca despues de ella.
+   *
+   * Es la medida honesta de la urgencia de un final. Rendirlo no acorta el
+   * camino critico (una regularizada ya cuesta cero cuatrimestres de cursada),
+   * pero mientras no lo apruebes todo lo que viene atras queda bloqueado. Un
+   * final con seis cuatrimestres detras es urgente; uno con cero, no.
+   */
+  function cuatrimestresDetras(codigo, materias, estadoPorId) {
+    var hijos = mapaHijos(materias);
+    var costo = function (m) {
+      var e = estadoPorId(m.codigo);
+      if (APROBADAS[e] || e === 'regularizada' || e === 'cursando') return 0;
+      return m.duracion === 'anual' ? 2 : 1;
+    };
+    var memo = {};
+    function desde(cod) {
+      if (memo[cod] !== undefined) return memo[cod];
+      memo[cod] = 0; // corta ciclos, aunque el plan no deberia tenerlos
+      var mejor = 0;
+      (hijos[cod] || []).forEach(function (h) {
+        var v = costo(h) + desde(h.codigo);
+        if (v > mejor) mejor = v;
+      });
+      return (memo[cod] = mejor);
+    }
+    return desde(codigo);
+  }
+
+  /**
+   * Prioridad calculada de un final adeudado. No se le pregunta al usuario:
+   * si la app tiene los datos para deducirla, pedirsela es trasladarle trabajo.
+   */
+  function prioridadFinal(materia, materias, estadoPorId) {
+    var i = impactoFinal(materia, materias, estadoPorId);
+    var detras = cuatrimestresDetras(materia.codigo, materias, estadoPorId);
+    var nivel, motivo;
+
+    if (i.desbloqueaYa.length) {
+      nivel = 'alta';
+      motivo = 'Aprobarlo te habilita ' + i.desbloqueaYa.length +
+        (i.desbloqueaYa.length === 1 ? ' materia de inmediato' : ' materias de inmediato');
+    } else if (detras >= 4) {
+      nivel = 'alta';
+      motivo = 'Tiene ' + detras + ' cuatrimestres de carrera colgando atrás';
+    } else if (i.total.length) {
+      nivel = 'media';
+      motivo = 'Traba ' + i.total.length +
+        (i.total.length === 1 ? ' materia' : ' materias') + ' más adelante' +
+        (detras ? ', y ' + detras + (detras === 1 ? ' cuatrimestre' : ' cuatrimestres') + ' de carrera' : '');
+    } else {
+      nivel = 'baja';
+      motivo = 'No traba ninguna materia: sólo suma al peso académico';
+    }
+
+    return {
+      nivel: nivel,
+      motivo: motivo,
+      detras: detras,
+      // Ordena de mayor a menor urgencia.
+      puntaje: i.desbloqueaYa.length * 100 + detras * 10 + i.total.length,
+      impacto: i
+    };
+  }
+
+  // --- progreso -----------------------------------------------------------
+
+  /**
+   * Cuanto de la carrera esta hecho, contando materias.
+   *
+   * `total` viene de afuera: el plan pide mas electivas de las que la app
+   * conoce (las 5 de 5.º nivel no estan cargadas), asi que el denominador no
+   * puede deducirse de `materias`.
+   */
+  function progresoCarrera(materias, estadoPorId, total) {
+    var aprobadas = 0, enCurso = 0, regularizadas = 0;
+    materias.forEach(function (m) {
+      var e = estadoPorId(m.codigo);
+      if (APROBADAS[e]) aprobadas++;
+      else if (e === 'cursando') enCurso++;
+      else if (e === 'regularizada') regularizadas++;
+    });
+    var t = total || materias.length;
+    return {
+      total: t,
+      aprobadas: aprobadas,
+      enCurso: enCurso,
+      regularizadas: regularizadas,
+      pendientes: t - aprobadas,
+      porcentaje: t ? Math.round(aprobadas / t * 1000) / 10 : 0
+    };
+  }
+
+  /**
+   * Titulo intermedio de Analista Universitario en Sistemas: todas las
+   * materias de 1.º a 3.º nivel aprobadas, incluido el Seminario Integrador
+   * (opcional para el grado, obligatorio para este titulo — por eso cuenta
+   * aunque hayas dicho que no lo vas a cursar).
+   */
+  function tituloIntermedio(materias, estadoPorId) {
+    var requeridas = materias.filter(function (m) { return m.nivel && m.nivel <= 3; });
+    var faltan = requeridas.filter(function (m) { return !APROBADAS[estadoPorId(m.codigo)]; });
+    return {
+      requeridas: requeridas,
+      faltan: faltan,
+      aprobadas: requeridas.length - faltan.length,
+      logrado: faltan.length === 0
+    };
+  }
+
   // --- simulacion ---------------------------------------------------------
 
   /**
@@ -494,8 +606,12 @@
     descendientes: descendientes,
     impacto: impacto,
     impactoFinal: impactoFinal,
+    cuatrimestresDetras: cuatrimestresDetras,
+    prioridadFinal: prioridadFinal,
     GANANCIA_PESO_FINAL: GANANCIA_PESO_FINAL,
     caminoCritico: caminoCritico,
+    progresoCarrera: progresoCarrera,
+    tituloIntermedio: tituloIntermedio,
     historialPeso: historialPeso,
     proyeccion: proyeccion,
     simular: simular,

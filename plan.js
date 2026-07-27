@@ -120,6 +120,10 @@ var PLAN_K23 = [
  */
 var CUPO_ELECTIVAS = 3;
 
+/* Las 5 electivas de 5.º nivel no se conocen todavia, pero cuentan igual en el
+ * total de materias de la carrera: 37 obligatorias + 3 + 5 = 45. */
+var ELECTIVAS_NIVEL5 = 5;
+
 var ELECTIVAS_K23 = [
   {codigo:"232063", nombre:"Experiencia de Usuario y Accesibilidad"},
   {codigo:null, nombre:"Administración Estratégica del Capital Humano"},

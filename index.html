@@ -12,9 +12,12 @@
 <a class="skip" href="#vista">Ir al contenido</a>
 
 <header class="topbar">
+
   <div class="topbar__in">
     <div class="topbar__izq">
-      <button type="button" class="volver" id="btn-volver" hidden>‹ Plan</button>
+      <button type="button" class="volver" id="btn-volver" hidden>
+        <span class="volver__chev" aria-hidden="true">‹</span><span class="volver__label">Plan</span>
+      </button>
       <h1 class="topbar__title" id="topbar-title">Plan K23</h1>
     </div>
     <nav class="seg" id="seg" role="tablist" aria-label="Secciones">
@@ -26,6 +29,7 @@
               aria-selected="false" aria-controls="vista-ajustes">Ajustes</button>
     </nav>
   </div>
+
 </header>
 
 <main id="vista">
@@ -36,60 +40,62 @@
     <p class="aviso" id="aviso" hidden role="status"></p>
 
     <h2 class="ghead">Resumen</h2>
-    <div class="card">
-      <div class="row">
-        <span class="row__label">Peso académico <span class="row__sub">hasta CL2026</span></span>
-        <span class="row__value num" id="peso-viejo">—</span>
+    <div class="tablero">
+      <div class="tj tj--hero">
+        <span class="tj__rot">Peso académico</span>
+        <span class="tj__num num" id="peso-viejo">—</span>
+        <span class="tj__pie">hasta CL2026</span>
       </div>
-      <div class="row">
-        <span class="row__label">Peso académico <span class="row__sub">desde CL2027</span></span>
-        <span class="row__value num" id="peso-nuevo">—</span>
+      <div class="tj tj--hero">
+        <span class="tj__rot">Peso académico</span>
+        <span class="tj__num num" id="peso-nuevo">—</span>
+        <span class="tj__pie">desde CL2027</span>
       </div>
-      <div class="row">
-        <span class="row__label">Promedio</span>
-        <span class="row__value num" id="promedio">—</span>
+      <div class="tj">
+        <span class="tj__rot">Promedio</span>
+        <span class="tj__num num" id="promedio">—</span>
       </div>
-      <div class="row">
-        <span class="row__label">Promedio ponderado <span class="row__sub">Ord. 1549</span></span>
-        <span class="row__value num" id="promedio-pond">—</span>
+      <div class="tj">
+        <span class="tj__rot">Promedio ponderado</span>
+        <span class="tj__num num" id="promedio-pond">—</span>
+        <span class="tj__pie">Ord. 1549</span>
       </div>
-      <div class="row">
-        <span class="row__label">Materias aprobadas</span>
-        <span class="row__value num" id="aprobadas">—</span>
+      <div class="tj">
+        <span class="tj__rot">Materias aprobadas</span>
+        <span class="tj__num num" id="aprobadas">—</span>
       </div>
-      <div class="row">
-        <span class="row__label">Podés cursar</span>
-        <span class="row__value num accent" id="habilitadas">—</span>
+      <div class="tj tj--acento">
+        <span class="tj__rot">Podés cursar</span>
+        <span class="tj__num num" id="habilitadas">—</span>
       </div>
     </div>
     <p class="gfoot" id="formulas"></p>
 
     <h2 class="ghead no-papel">Herramientas</h2>
-    <div class="card no-papel">
-      <button type="button" class="row row--btn" data-herr="simulador">
-        <span class="row__label">Simulador de inscripción
-          <span class="row__sub">Probá una combinación y mirá cómo queda tu peso</span></span>
-        <span class="row__value chevron" aria-hidden="true">›</span>
+    <div class="herramientas no-papel">
+      <button type="button" class="herr" data-herr="progreso">
+        <span class="herr__txt"><span class="herr__nom">Progreso de la carrera</span><span class="herr__sub">Cuánto llevás, cuánto falta y a qué distancia está el Analista</span></span>
+        <span class="herr__ir" aria-hidden="true">›</span>
       </button>
-      <button type="button" class="row row--btn" data-herr="critico">
-        <span class="row__label">Camino crítico
-          <span class="row__sub">Cuántos cuatrimestres te faltan como mínimo</span></span>
-        <span class="row__value chevron" aria-hidden="true">›</span>
+      <button type="button" class="herr" data-herr="simulador">
+        <span class="herr__txt"><span class="herr__nom">Simulador de inscripción</span><span class="herr__sub">Probá una combinación y mirá cómo queda tu peso</span></span>
+        <span class="herr__ir" aria-hidden="true">›</span>
       </button>
-      <button type="button" class="row row--btn" data-herr="evolucion">
-        <span class="row__label">Evolución del peso académico
-          <span class="row__sub">Cómo se movió ciclo a ciclo</span></span>
-        <span class="row__value chevron" aria-hidden="true">›</span>
+      <button type="button" class="herr" data-herr="critico">
+        <span class="herr__txt"><span class="herr__nom">Camino crítico</span><span class="herr__sub">Cuántos cuatrimestres te faltan como mínimo</span></span>
+        <span class="herr__ir" aria-hidden="true">›</span>
       </button>
-      <button type="button" class="row row--btn" data-herr="proyeccion">
-        <span class="row__label">Proyección de egreso
-          <span class="row__sub">Cuándo terminás según el ritmo que lleves</span></span>
-        <span class="row__value chevron" aria-hidden="true">›</span>
+      <button type="button" class="herr" data-herr="evolucion">
+        <span class="herr__txt"><span class="herr__nom">Evolución del peso académico</span><span class="herr__sub">Cómo se movió ciclo a ciclo</span></span>
+        <span class="herr__ir" aria-hidden="true">›</span>
       </button>
-      <button type="button" class="row row--btn" data-herr="impacto">
-        <span class="row__label">Ordenar por impacto
-          <span class="row__sub">Qué materia te destraba más si la aprobás</span></span>
-        <span class="row__value chevron" aria-hidden="true">›</span>
+      <button type="button" class="herr" data-herr="proyeccion">
+        <span class="herr__txt"><span class="herr__nom">Proyección de egreso</span><span class="herr__sub">Cuándo terminás según el ritmo que lleves</span></span>
+        <span class="herr__ir" aria-hidden="true">›</span>
+      </button>
+      <button type="button" class="herr" data-herr="impacto">
+        <span class="herr__txt"><span class="herr__nom">Ordenar por impacto</span><span class="herr__sub">Qué materia te destraba más si la aprobás</span></span>
+        <span class="herr__ir" aria-hidden="true">›</span>
       </button>
     </div>
     <p class="gfoot no-papel">Son de sólo lectura: te muestran cómo quedarías, sin tocar lo que cargaste.</p>
@@ -98,10 +104,15 @@
       Materias
       <span class="ghead__acts">
         <button type="button" class="ghead__act" id="btn-deshacer" hidden>Deshacer</button>
-        <button type="button" class="ghead__act" id="btn-filtro" aria-pressed="false">Sólo las que podés cursar</button>
+        <button type="button" class="sw" id="btn-filtro" aria-pressed="false">
+          <span class="sw__txt">Sólo las que podés cursar</span>
+          <span class="sw__tr" aria-hidden="true"><span class="sw__kn"></span></span>
+        </button>
       </span>
     </h2>
+
     <div class="grilla" id="niveles"></div>
+
     <div id="editor-materia"></div>
 
     <h2 class="ghead">
@@ -308,6 +319,17 @@
     <div class="card" id="evo-tabla"></div>
   </section>
 
+  <!-- -------------------------------------------------------- PROGRESO -->
+  <section class="wrap" id="vista-progreso" hidden>
+    <div class="card herr__panel prog__panel" id="prog-carrera"></div>
+    <div class="card herr__panel" id="prog-analista"></div>
+    <div class="card herr__panel" id="prog-juego"></div>
+    <p class="gfoot">La carrera completa son 45 materias: las 37 obligatorias más 3 electivas
+      de 3.º/4.º nivel y 5 de 5.º. Avanzan la barra sólo las aprobadas o promocionadas: una
+      regularizada todavía debe el final. Como el resto de las herramientas, es de sólo
+      lectura.</p>
+  </section>
+
   <!-- ------------------------------------------------------ PROYECCION -->
   <section class="wrap" id="vista-proyeccion" hidden>
     <div class="card herr__panel">
@@ -350,5 +372,8 @@
 <script src="calculo.js"></script>
 <script src="disco.js"></script>
 <script src="app.js"></script>
+<!-- impeccable-live-start -->
+<script src="http://localhost:8400/live.js?token=c9a88124-f2a5-4960-b263-04294342e84e"></script>
+<!-- impeccable-live-end -->
 </body>
 </html>

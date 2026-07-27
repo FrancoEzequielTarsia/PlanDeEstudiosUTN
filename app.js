@@ -455,6 +455,9 @@
 
     var esAnulada = anulada(m);
     if (esAnulada) b.classList.add('is-anulada');
+    // Gancho para que el CSS pueda mandar al fondo lo que ya esta cerrado.
+    // Regularizada no entra: todavia debe el final.
+    if (C.APROBADAS[estado]) b.classList.add('is-aprobada');
 
     var pie = el('span', 'celda__pie');
     var pt = el('i', 'chip__pt');
@@ -778,10 +781,11 @@
   // ------------------------------------------------------------ secciones
 
   var VISTAS = ['plan', 'correlativas', 'ajustes', 'simulador', 'critico', 'impacto',
-                'evolucion', 'proyeccion'];
+                'evolucion', 'proyeccion', 'progreso'];
   // Las herramientas no son pestañas: son pantallas a las que se entra desde
   // Plan y de las que se vuelve, como una vista empujada.
   var HERRAMIENTAS = {
+    progreso: 'Progreso de la carrera',
     simulador: 'Simulador de inscripción',
     critico: 'Camino crítico',
     impacto: 'Ordenar por impacto',
@@ -810,6 +814,7 @@
     else if (cual === 'impacto') pintarImpacto();
     else if (cual === 'evolucion') pintarEvolucion();
     else if (cual === 'proyeccion') pintarProyeccion();
+    else if (cual === 'progreso') pintarProgreso();
 
     window.scrollTo(0, 0);
   }
@@ -1175,33 +1180,42 @@
     });
 
     filas.forEach(function (f) {
-      var fila = el('div', 'row imp__fila');
+      var env = el('div', 'fila-wrap');
+      var fila = el('button', 'row imp__fila imp__fila--btn');
+      fila.type = 'button';
+      fila.setAttribute('aria-expanded', String(abiertaCursar === f.m.codigo));
+
       var id = el('span', 'row__label');
       id.appendChild(el('span', 'sim__nom', f.m.nombre));
       var meta = el('span', 'sim__meta');
       meta.appendChild(punto('var(--accent)'));
       meta.appendChild(el('span', null, f.m.nivel ? 'Nivel ' + f.m.nivel : 'Electiva'));
-      if (f.lista.length) {
-        meta.appendChild(el('span', 'imp__quienes',
-          '→ ' + f.lista.map(function (x) { return x.nombre; }).join(', ')));
-      }
       id.appendChild(meta);
       fila.appendChild(id);
 
       var nums = el('span', 'imp__nums');
-      var a = el('span', 'imp__n');
-      a.appendChild(el('b', 'num', String(f.ya)));
-      a.appendChild(el('small', null, 'ahora'));
-      if (f.ya > 0) a.dataset.destaca = '1';
-      nums.appendChild(a);
-
-      var b = el('span', 'imp__n');
-      b.appendChild(el('b', 'num', String(f.total)));
-      b.appendChild(el('small', null, 'en total'));
-      nums.appendChild(b);
-
+      nums.appendChild(botonNumero(f.ya, 'ahora', f.ya > 0));
+      nums.appendChild(botonNumero(f.total, 'en total', false));
       fila.appendChild(nums);
-      cont.appendChild(fila);
+
+      var fl = el('span', 'mat__flecha', '›');
+      fl.setAttribute('aria-hidden', 'true');
+      fila.appendChild(fl);
+
+      fila.addEventListener('click', function () {
+        abiertaCursar = (abiertaCursar === f.m.codigo) ? null : f.m.codigo;
+        pintarImpacto();
+      });
+      env.appendChild(fila);
+
+      if (abiertaCursar === f.m.codigo) {
+        var i = C.impacto(f.m, activas(), estadoDe);
+        var d = el('div', 'desp');
+        d.appendChild(detalleMaterias('Se habilitan apenas la apruebes', i.destrabaYa));
+        d.appendChild(detalleMaterias('Dependen de esta materia en algún punto', i.total));
+        env.appendChild(d);
+      }
+      cont.appendChild(env);
     });
 
     var conImpacto = filas.filter(function (f) { return f.ya > 0; }).length;
@@ -1369,6 +1383,262 @@
   }
 
 
+  // ------------------------------------------------------------ progreso
+  // La única pantalla con permiso para jugar: barra de casilleros, caminante,
+  // confetti y un modo «¿y si apruebo N más?». Sigue siendo de sólo lectura.
+
+  var progPendientes = [];   // ticks aún no aprobados de la tira grande, en orden
+  var progJuegoRes = null;   // párrafo con el resultado del sueño
+  var progUltimoPct = 0;     // para festejar sólo al CRUZAR el 100 soñado
+  var progFestejado = false; // un solo festejo automático por sesión
+
+  function sinAnimaciones() {
+    return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  function materiasCarrera() {
+    return PLAN_K23.filter(function (m) { return !m.opcional; }).concat(datos.electivas);
+  }
+
+  // 37 obligatorias + 3 electivas de 3.º/4.º + 5 de 5.º = 45. Las electivas que
+  // faltan cargar entran igual al denominador: son parte de la carrera.
+  function totalCarrera() {
+    return PLAN_K23.filter(function (m) { return !m.opcional; }).length +
+           CUPO_ELECTIVAS + ELECTIVAS_NIVEL5;
+  }
+
+  function fraseProgreso(pct) {
+    if (pct >= 100) return '¡Plan completo! No queda casillero sin pintar.';
+    if (pct >= 75)  return 'Recta final: ya se ve el birrete.';
+    if (pct >= 50)  return 'Pasaste la mitad: de acá en adelante es cuesta abajo.';
+    if (pct >= 25)  return 'Agarraste ritmo: hay más camino pintado del que parece.';
+    if (pct > 0)    return 'Arrancaste: cada casillero pintado ya es tuyo.';
+    return 'Todo por pintar. La primera materia arranca la historia.';
+  }
+
+  // La tira ordena por cercanía al título: primero lo aprobado, después lo que
+  // está a un final, lo que está en curso, y recién al final lo que ni empezó.
+  var ORDEN_TICK = { aprobada: 0, promocionada: 0, regularizada: 1, cursando: 2,
+                     abandonada: 3, 'sin-cursar': 4 };
+
+  function itemsDeTira(materias) {
+    return materias.map(function (m) {
+      return { nombre: m.nombre, estado: estadoDe(m.codigo) };
+    }).sort(function (a, b) { return ORDEN_TICK[a.estado] - ORDEN_TICK[b.estado]; });
+  }
+
+  function tiraTicks(items, mini) {
+    var tira = el('div', 'prog__tira' + (mini ? ' prog__tira--mini' : ''));
+    tira.setAttribute('aria-hidden', 'true');
+    var ticks = items.map(function (it, i) {
+      var t = el('i', 'prog__tick');
+      t.title = it.nombre + ' · ' + (it.placeholder ? 'sin cargar' : ETIQUETA[it.estado]);
+      tira.appendChild(t);
+      // El color entra un instante después y en cascada: la barra se pinta sola.
+      setTimeout(function () { t.dataset.e = it.estado; }, 80 + i * 22);
+      return t;
+    });
+    return { tira: tira, ticks: ticks };
+  }
+
+  function animarNumero(nodo, hasta, decimales) {
+    if (sinAnimaciones()) { nodo.textContent = hasta.toFixed(decimales); return; }
+    var arranque = null, DURACION = 900;
+    function paso(ts) {
+      if (!arranque) arranque = ts;
+      var f = Math.min(1, (ts - arranque) / DURACION);
+      var suave = 1 - Math.pow(1 - f, 3);
+      nodo.textContent = (hasta * suave).toFixed(decimales);
+      if (f < 1) requestAnimationFrame(paso);
+    }
+    requestAnimationFrame(paso);
+  }
+
+  function festejar() {
+    if (sinAnimaciones()) return;
+    var cont = el('div', 'confeti-cont');
+    var colores = ['var(--verde)', 'var(--naranja)', 'var(--violeta)',
+                   'var(--accent)', 'var(--amarillo)', 'var(--rojo)'];
+    for (var i = 0; i < 90; i++) {
+      var papel = el('i', 'confeti');
+      papel.style.left = (Math.random() * 100) + 'vw';
+      papel.style.background = colores[i % colores.length];
+      papel.style.animationDuration = (1.7 + Math.random() * 1.6) + 's';
+      papel.style.animationDelay = (Math.random() * 0.5) + 's';
+      papel.style.transform = 'rotate(' + Math.floor(Math.random() * 360) + 'deg)';
+      var escala = 0.7 + Math.random() * 0.9;
+      papel.style.width = Math.round(7 * escala) + 'px';
+      papel.style.height = Math.round(12 * escala) + 'px';
+      cont.appendChild(papel);
+    }
+    document.body.appendChild(cont);
+    setTimeout(function () {
+      if (cont.parentNode) cont.parentNode.removeChild(cont);
+    }, 3900);
+  }
+
+  function pintarProgreso() {
+    progUltimoPct = 0;
+    var p = C.progresoCarrera(materiasCarrera(), estadoDe, totalCarrera());
+    var t = C.tituloIntermedio(PLAN_K23, estadoDe);
+    pintarProgresoCarrera(p);
+    pintarProgresoAnalista(t);
+    pintarProgresoJuego(p);
+    // Si ya hay motivo real de festejo, el confetti cae solo (una vez por sesión).
+    if (!progFestejado && (p.porcentaje >= 100 || t.logrado)) {
+      progFestejado = true;
+      setTimeout(festejar, 700);
+    }
+  }
+
+  function pintarProgresoCarrera(p) {
+    var caja = document.getElementById('prog-carrera');
+    caja.textContent = '';
+
+    var cab = el('div', 'prog__cab');
+    var decimales = p.porcentaje % 1 ? 1 : 0;
+    var pct = el('span', 'prog__pct num', (0).toFixed(decimales));
+    cab.appendChild(pct);
+    cab.appendChild(el('span', 'prog__signo', '%'));
+    cab.appendChild(el('span', 'prog__de',
+      p.aprobadas + ' de ' + p.total + ' materias aprobadas'));
+    caja.appendChild(cab);
+    animarNumero(pct, p.porcentaje, decimales);
+
+    caja.appendChild(el('p', 'prog__frase', fraseProgreso(p.porcentaje)));
+
+    var items = itemsDeTira(materiasCarrera());
+    while (items.length < p.total) {
+      items.push({ nombre: 'Electiva de 5.º nivel', estado: 'sin-cursar', placeholder: true });
+    }
+    var armado = tiraTicks(items, false);
+
+    var cami = el('span', 'prog__cami', p.porcentaje >= 100 ? '🕺' : '🚶');
+    cami.setAttribute('aria-hidden', 'true');
+    cami.style.left = '0%';
+
+    var camino = el('div', 'prog__camino');
+    camino.appendChild(cami);
+    camino.appendChild(armado.tira);
+
+    var gorro = el('button', 'prog__gorro', '🎓');
+    gorro.type = 'button';
+    gorro.setAttribute('aria-label', 'Tirar confetti');
+    gorro.title = 'Festejá un poco';
+    gorro.addEventListener('click', festejar);
+
+    var fila = el('div', 'prog__fila');
+    fila.appendChild(camino);
+    fila.appendChild(gorro);
+    caja.appendChild(fila);
+
+    // El caminante arranca en cero y camina hasta donde va la carrera.
+    setTimeout(function () { cami.style.left = p.porcentaje + '%'; }, 120);
+
+    progPendientes = armado.ticks.filter(function (tk, i) {
+      return !C.APROBADAS[items[i].estado];
+    });
+
+    var meta = el('p', 'prog__meta');
+    var parte = function (color, texto) {
+      var s = el('span', 'prog__meta-it');
+      s.appendChild(punto(color));
+      s.appendChild(el('span', null, texto));
+      meta.appendChild(s);
+    };
+    if (p.enCurso) parte('var(--naranja)', p.enCurso + ' en curso');
+    if (p.regularizadas) parte('var(--amarillo)',
+      p.regularizadas + ' a un final de sumar');
+    var sinEmpezar = p.pendientes - p.enCurso - p.regularizadas;
+    if (sinEmpezar > 0) parte('var(--gris)', sinEmpezar + ' sin empezar');
+    caja.appendChild(meta);
+
+    // La tira es decorativa; esto es lo que lee el lector de pantalla.
+    var srt = el('p', 'sr-only',
+      'Progreso de la carrera: ' + p.aprobadas + ' de ' + p.total +
+      ' materias aprobadas, ' + p.porcentaje + ' por ciento.');
+    caja.appendChild(srt);
+  }
+
+  function pintarProgresoAnalista(t) {
+    var caja = document.getElementById('prog-analista');
+    caja.textContent = '';
+    caja.appendChild(el('p', 'sim__pregunta',
+      '🎯 Título intermedio: Analista Universitario en Sistemas'));
+
+    if (t.logrado) {
+      caja.appendChild(el('p', 'prog__grande', '¡Ya lo tenés! 🎉'));
+      caja.appendChild(el('p', 'sim__ayuda',
+        'Aprobaste las ' + t.requeridas.length + ' materias de 1.º a 3.º nivel, ' +
+        'Seminario Integrador incluido. Andá pidiendo el título.'));
+      return;
+    }
+
+    var n = t.faltan.length;
+    caja.appendChild(el('p', 'prog__grande',
+      'Estás a ' + n + (n === 1 ? ' materia' : ' materias')));
+    caja.appendChild(el('p', 'sim__ayuda',
+      'Pide aprobadas las ' + t.requeridas.length + ' materias de 1.º a 3.º nivel, incluido ' +
+      'el Seminario Integrador, que para este título no es opcional. Llevás ' +
+      t.aprobadas + ' de ' + t.requeridas.length + '.'));
+
+    caja.appendChild(tiraTicks(itemsDeTira(t.requeridas), true).tira);
+    caja.appendChild(detalleMaterias('Todavía te falta aprobar', t.faltan));
+  }
+
+  function pintarProgresoJuego(p) {
+    var caja = document.getElementById('prog-juego');
+    caja.textContent = '';
+    caja.appendChild(el('p', 'sim__pregunta', '🎮 ¿Y si apruebo unas cuantas más?'));
+
+    if (p.pendientes <= 0) {
+      caja.appendChild(el('p', 'sim__ayuda', 'Nada que soñar: ya aprobaste todo.'));
+    } else {
+      caja.appendChild(el('p', 'sim__ayuda',
+        'Deslizá y mirá hasta dónde llega la barra. Es un sueño: no cambia nada de lo que cargaste.'));
+
+      var fila = el('div', 'prog__juego');
+      var rango = document.createElement('input');
+      rango.type = 'range';
+      rango.min = '0'; rango.max = String(p.pendientes); rango.step = '1'; rango.value = '0';
+      rango.className = 'prog__rango';
+      rango.setAttribute('aria-label', 'Cuántas materias más aprobás en el sueño');
+      fila.appendChild(rango);
+      var nro = el('b', 'num prog__juego-n', '+0');
+      fila.appendChild(nro);
+      caja.appendChild(fila);
+
+      progJuegoRes = el('p', 'prog__juego-res', 'La barra sueña con vos.');
+      caja.appendChild(progJuegoRes);
+
+      rango.addEventListener('input', function () {
+        var n = parseInt(rango.value, 10) || 0;
+        nro.textContent = '+' + n;
+        jugarProgreso(p, n);
+      });
+    }
+
+    var fest = el('button', 'bt prog__festejo', '🎉 Festejar igual');
+    fest.type = 'button';
+    fest.addEventListener('click', festejar);
+    caja.appendChild(fest);
+  }
+
+  function jugarProgreso(p, n) {
+    progPendientes.forEach(function (tk, i) {
+      tk.classList.toggle('is-fantasma', i < n);
+    });
+    var aprobadas = p.aprobadas + n;
+    var pct = Math.round(aprobadas / p.total * 1000) / 10;
+    progJuegoRes.textContent = n === 0
+      ? 'La barra sueña con vos.'
+      : 'Con ' + n + ' más estarías en el ' + pct + '% (' + aprobadas + ' de ' +
+        p.total + '). ' + fraseProgreso(pct);
+    // Llegar al 100 aunque sea soñado también se festeja.
+    if (pct >= 100 && progUltimoPct < 100) festejar();
+    progUltimoPct = pct;
+  }
+
   // ----------------------------------------------------------- buscador
 
   var busSel = 0;
@@ -1439,20 +1709,38 @@
 
   // ------------------------------------------------- prioridad de finales
 
-  var PRIO = { alta: 'Alta', normal: 'Normal', baja: 'Baja' };
-  var ORDEN_PRIO = { alta: 0, normal: 1, baja: 2 };
 
-  function prioridadDe(id) {
-    var r = datos.materias[id];
-    return (r && r.prioridad) || 'normal';
+  var ETIQ_PRIO = { alta: 'Alta', media: 'Media', baja: 'Baja' };
+  var abiertaFinal = null;   // fila desplegada en la lista de finales
+  var abiertaCursar = null;  // fila desplegada en la lista de cursada
+
+  // Lista desplegable con los nombres detras de un numero.
+  function detalleMaterias(titulo, lista) {
+    var caja = el('div', 'desp__grupo');
+    caja.appendChild(el('p', 'desp__tit', titulo));
+    if (!lista.length) {
+      caja.appendChild(el('p', 'desp__vacio', 'Ninguna.'));
+      return caja;
+    }
+    var ul = el('ul', 'desp__lista');
+    lista.slice().sort(function (a, b) { return (a.nivel || 9) - (b.nivel || 9); })
+      .forEach(function (m) {
+        var li = el('li');
+        li.appendChild(punto(puedeCursar(m) ? 'var(--accent)' : colorDe(estadoDe(m.codigo))));
+        li.appendChild(el('span', null, m.nombre));
+        li.appendChild(el('span', 'destraba__niv', m.nivel ? 'Nivel ' + m.nivel : 'Electiva'));
+        ul.appendChild(li);
+      });
+    caja.appendChild(ul);
+    return caja;
   }
 
-  function ciclarPrioridad(id) {
-    var actual = prioridadDe(id);
-    var siguiente = actual === 'normal' ? 'alta' : (actual === 'alta' ? 'baja' : 'normal');
-    rec(id).prioridad = siguiente === 'normal' ? null : siguiente;
-    guardar();
-    pintarImpacto();
+  function botonNumero(valor, rotulo, destaca) {
+    var b = el('span', 'imp__n');
+    b.appendChild(el('b', 'num', String(valor)));
+    b.appendChild(el('small', null, rotulo));
+    if (destaca) b.dataset.destaca = '1';
+    return b;
   }
 
   function pintarFinales() {
@@ -1471,17 +1759,15 @@
     }
 
     var filas = adeudados.map(function (m) {
-      var i = C.impactoFinal(m, activas(), estadoDe);
-      return { m: m, ya: i.desbloqueaYa.length, traba: i.trabadas.length,
-               total: i.total.length, lista: i.desbloqueaYa };
+      return { m: m, p: C.prioridadFinal(m, activas(), estadoDe) };
     });
-    filas.sort(function (a, b) {
-      return (ORDEN_PRIO[prioridadDe(a.m.codigo)] - ORDEN_PRIO[prioridadDe(b.m.codigo)]) ||
-             (b.ya - a.ya) || (b.traba - a.traba) || (b.total - a.total);
-    });
+    filas.sort(function (a, b) { return b.p.puntaje - a.p.puntaje; });
 
     filas.forEach(function (f) {
-      var fila = el('div', 'row imp__fila');
+      var env = el('div', 'fila-wrap');
+      var fila = el('button', 'row imp__fila imp__fila--btn');
+      fila.type = 'button';
+      fila.setAttribute('aria-expanded', String(abiertaFinal === f.m.codigo));
 
       var id = el('span', 'row__label');
       id.appendChild(el('span', 'sim__nom', f.m.nombre));
@@ -1489,49 +1775,48 @@
       meta.appendChild(punto('var(--amarillo)'));
       meta.appendChild(el('span', null, (f.m.nivel ? 'Nivel ' + f.m.nivel : 'Electiva') +
         ' · +' + C.GANANCIA_PESO_FINAL + ' al peso'));
-      if (f.lista.length) {
-        meta.appendChild(el('span', 'imp__quienes',
-          '→ destraba ' + f.lista.map(function (x) { return x.nombre; }).join(', ')));
-      } else if (f.traba) {
-        meta.appendChild(el('span', 'imp__quienes',
-          '→ ' + f.traba + (f.traba === 1 ? ' materia lo pide' : ' materias lo piden') +
-          ' aprobado, pero les falta algo más'));
-      }
+      meta.appendChild(el('span', 'imp__quienes', f.p.motivo + '.'));
       id.appendChild(meta);
       fila.appendChild(id);
 
-      var prio = prioridadDe(f.m.codigo);
-      var bp = el('button', 'prio');
-      bp.type = 'button';
-      bp.dataset.p = prio;
-      bp.textContent = PRIO[prio];
-      bp.setAttribute('aria-label', 'Prioridad de ' + f.m.nombre + ': ' + PRIO[prio] + '. Tocá para cambiarla.');
-      bp.addEventListener('click', function () { ciclarPrioridad(f.m.codigo); });
-      fila.appendChild(bp);
+      var et = el('span', 'prio', ETIQ_PRIO[f.p.nivel]);
+      et.dataset.p = f.p.nivel;
+      fila.appendChild(et);
 
       var nums = el('span', 'imp__nums');
-      var a = el('span', 'imp__n');
-      a.appendChild(el('b', 'num', String(f.ya)));
-      a.appendChild(el('small', null, 'destraba'));
-      if (f.ya > 0) a.dataset.destaca = '1';
-      nums.appendChild(a);
-      var b = el('span', 'imp__n');
-      b.appendChild(el('b', 'num', String(f.total)));
-      b.appendChild(el('small', null, 'en total'));
-      nums.appendChild(b);
+      nums.appendChild(botonNumero(f.p.impacto.desbloqueaYa.length, 'destraba', f.p.impacto.desbloqueaYa.length > 0));
+      nums.appendChild(botonNumero(f.p.impacto.total.length, 'en total', false));
+      nums.appendChild(botonNumero(f.p.detras, 'cuatri. atrás', f.p.detras >= 4));
       fila.appendChild(nums);
 
-      cont.appendChild(fila);
+      var fl = el('span', 'mat__flecha', '›');
+      fl.setAttribute('aria-hidden', 'true');
+      fila.appendChild(fl);
+
+      fila.addEventListener('click', function () {
+        abiertaFinal = (abiertaFinal === f.m.codigo) ? null : f.m.codigo;
+        pintarFinales();
+      });
+      env.appendChild(fila);
+
+      if (abiertaFinal === f.m.codigo) {
+        var d = el('div', 'desp');
+        d.appendChild(detalleMaterias('Se habilitan apenas lo apruebes', f.p.impacto.desbloqueaYa));
+        d.appendChild(detalleMaterias('Lo piden aprobado', f.p.impacto.trabadas));
+        d.appendChild(detalleMaterias('Dependen de esta materia en algún punto', f.p.impacto.total));
+        env.appendChild(d);
+      }
+      cont.appendChild(env);
     });
 
-    var conImpacto = filas.filter(function (f) { return f.ya > 0; }).length;
+    var altas = filas.filter(function (f) { return f.p.nivel === 'alta'; }).length;
     pie.textContent = 'Debés ' + filas.length + (filas.length === 1 ? ' final' : ' finales') +
-      '. Cada uno que apruebes suma ' + C.GANANCIA_PESO_FINAL +
-      ' puntos al peso nuevo (+11 por aprobada y +7 por dejar de adeudarlo) y no te consume ' +
-      'ningún cuatrimestre. ' +
-      (conImpacto
-        ? 'Los de arriba son los que además destraban materias.'
-        : 'Ninguno destraba una materia por sí solo todavía.');
+      '. Cada uno suma ' + C.GANANCIA_PESO_FINAL + ' puntos al peso nuevo (+11 por aprobada y ' +
+      '+7 por dejar de adeudarlo) y no te consume ningún cuatrimestre. La prioridad la calcula la ' +
+      'app: pesa primero lo que se habilita de inmediato, después cuántos cuatrimestres de carrera ' +
+      'quedan colgando atrás. ' +
+      (altas ? 'Tenés ' + altas + (altas === 1 ? ' final de prioridad alta.' : ' finales de prioridad alta.')
+             : 'Ninguno es urgente por correlativas.');
   }
 
   // ------------------------------------------------------------- arranque
@@ -1572,7 +1857,6 @@
     document.getElementById('btn-filtro').addEventListener('click', function () {
       soloPuedo = !soloPuedo;
       this.setAttribute('aria-pressed', String(soloPuedo));
-      this.textContent = soloPuedo ? 'Ver todas' : 'Sólo las que podés cursar';
       pintarNiveles();
     });
 

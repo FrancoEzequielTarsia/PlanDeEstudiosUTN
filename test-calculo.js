@@ -12,9 +12,12 @@ var path = require('path');
 
 // plan.js es un script de navegador que declara globales con `var`.
 var fuente = fs.readFileSync(path.join(__dirname, 'plan.js'), 'utf8');
-var cargado = new Function(fuente + '\nreturn {PLAN_K23: PLAN_K23, ELECTIVAS_K23: ELECTIVAS_K23};')();
+var cargado = new Function(fuente + '\nreturn {PLAN_K23: PLAN_K23, ELECTIVAS_K23: ELECTIVAS_K23, ' +
+  'CUPO_ELECTIVAS: CUPO_ELECTIVAS, ELECTIVAS_NIVEL5: ELECTIVAS_NIVEL5};')();
 var PLAN_K23 = cargado.PLAN_K23;
 var ELECTIVAS_K23 = cargado.ELECTIVAS_K23;
+var CUPO_ELECTIVAS = cargado.CUPO_ELECTIVAS;
+var ELECTIVAS_NIVEL5 = cargado.ELECTIVAS_NIVEL5;
 
 var fallas = 0, corridas = 0;
 
@@ -436,6 +439,63 @@ var todo = {};
 PLAN_K23.forEach(function (m) { todo[m.codigo] = ap(2025, 8); });
 var proyFin = C.proyeccion(PLAN_K23, estadosDe(todo), 4, HOY);
 comprobar('con todo aprobado no falta nada', proyFin.cuatrimestres, 0);
+
+// -------------------------------------------------------- progreso de carrera
+
+seccion('Progreso de la carrera');
+
+var obligatorias = PLAN_K23.filter(function (m) { return !m.opcional; });
+var TOTAL_CARRERA = obligatorias.length + CUPO_ELECTIVAS + ELECTIVAS_NIVEL5;
+comprobar('la carrera completa son 45 materias', TOTAL_CARRERA, 45);
+
+var progVacio = C.progresoCarrera(obligatorias, vacio, TOTAL_CARRERA);
+comprobar('sin nada cargado el progreso es 0 de 45',
+  [progVacio.aprobadas, progVacio.total, progVacio.porcentaje], [0, 45, 0]);
+
+// 2 aprobadas + 1 regularizada + 1 cursando: solo las aprobadas avanzan la barra.
+var progMezcla = C.progresoCarrera(obligatorias, estadosDe({
+  '082021': ap(2025, 8), '950702': pr(2025, 9), '232011': rg(2025),
+  '232010': { estado: 'cursando', nota: null, anio: 2026 }
+}), TOTAL_CARRERA);
+comprobar('aprobada y promocionada suman, regularizada y cursando no', progMezcla.aprobadas, 2);
+comprobar('pero se informan aparte',
+  [progMezcla.enCurso, progMezcla.regularizadas], [1, 1]);
+comprobar('2 de 45 es 4.4%', progMezcla.porcentaje, 4.4);
+comprobar('quedan 43 pendientes', progMezcla.pendientes, 43);
+
+var progTodo = C.progresoCarrera(obligatorias, estadosDe(todo), obligatorias.length);
+comprobar('con todo aprobado el porcentaje es 100', progTodo.porcentaje, 100);
+
+// ------------------------------------------------------------ titulo intermedio
+
+seccion('Título intermedio (Analista Universitario en Sistemas)');
+
+var analistaVacio = C.tituloIntermedio(PLAN_K23, vacio);
+comprobar('pide las 24 materias de 1.º a 3.º nivel (Seminario incluido)',
+  analistaVacio.requeridas.length, 24);
+comprobar('el Seminario Integrador esta entre las requeridas',
+  analistaVacio.requeridas.some(function (m) { return m.codigo === 'SEM-INT'; }), true);
+comprobar('sin nada cargado faltan las 24', analistaVacio.faltan.length, 24);
+comprobar('y no esta logrado', analistaVacio.logrado, false);
+
+// Aprobar una de nivel 4 no acerca al titulo intermedio.
+var analistaN4 = C.tituloIntermedio(PLAN_K23, estadosDe({ '950310': ap(2025, 8) }));
+comprobar('una de nivel 4 no cuenta para el Analista', analistaN4.aprobadas, 0);
+
+// Regularizada no alcanza: el titulo pide el final aprobado.
+var analistaRegu = C.tituloIntermedio(PLAN_K23, estadosDe({ '082021': rg(2025) }));
+comprobar('regularizada no cuenta para el Analista', analistaRegu.aprobadas, 0);
+
+var casiTodo = {};
+PLAN_K23.forEach(function (m) {
+  if (m.nivel <= 3 && m.codigo !== 'SEM-INT') casiTodo[m.codigo] = ap(2025, 8);
+});
+var analistaSinSem = C.tituloIntermedio(PLAN_K23, estadosDe(casiTodo));
+comprobar('con los 3 niveles pero sin el Seminario, falta 1',
+  analistaSinSem.faltan.map(function (m) { return m.codigo; }), ['SEM-INT']);
+
+var analistaFin = C.tituloIntermedio(PLAN_K23, estadosDe(todo));
+comprobar('con todo aprobado el titulo esta logrado', analistaFin.logrado, true);
 
 
 console.log('\n' + (fallas === 0

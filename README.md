@@ -41,10 +41,16 @@ piden *aprobar* la previa se cumplen igual que las que piden *regularizarla*.
 
 ### Herramientas
 
-Desde la sección **Plan** se entra a tres pantallas de decisión. No abren ventanas nuevas ni
+Desde la sección **Plan** se entra a seis pantallas de decisión. No abren ventanas nuevas ni
 ocupan una pestaña propia: la pantalla cambia y volvés con «‹ Plan». Son de **sólo lectura**:
 te muestran cómo quedarías, sin tocar lo que cargaste.
 
+- **Progreso de la carrera.** Cuánto llevás de las **45 materias** (37 obligatorias + 3
+  electivas de 3.º/4.º + 5 de 5.º), en una barra de casilleros que se pinta sola, con
+  porcentaje animado y confetti. Además te dice a cuántas materias estás del título
+  intermedio de **Analista Universitario en Sistemas** (los tres primeros niveles más el
+  Seminario Integrador), y tiene un modo «¿y si apruebo unas cuantas más?» para soñar sin
+  tocar tus datos.
 - **Simulador de inscripción.** Marcás las materias que pensás anotarte y te muestra cómo
   quedaría tu peso académico bajo las dos fórmulas, qué destraba, y si la combinación es viable
   (avisa si elegiste una materia que todavía no podés cursar, o dos donde una es correlativa de
@@ -81,7 +87,7 @@ azul para «Podés cursarla». No hay leyenda que estudiar: cada materia dice su
 node test-calculo.js
 ```
 
-62 comprobaciones. Incluyen los dos ejemplos reales de SIGA (peso académico **133** y **151** en
+138 comprobaciones. Incluyen los dos ejemplos reales de SIGA (peso académico **133** y **151** en
 uno, **169** en el otro): si alguno se rompe, el número que muestra la app dejó de coincidir con
 el que te muestra la facultad.
 

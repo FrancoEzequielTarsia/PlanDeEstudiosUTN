@@ -1,2 +1,5 @@
 # Respaldos que genera la app: contienen datos académicos personales.
 plan-k23*.json
+
+# Estado local de impeccable live mode (config y journal de sesiones).
+.impeccable/

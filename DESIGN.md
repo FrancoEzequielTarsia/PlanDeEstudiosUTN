@@ -102,9 +102,25 @@ siendo tres secciones, no seis) y no abren ventanas del navegador. Reglas que se
   memoria: no se guarda, porque es una prueba, no un dato.
 - Sólo se entra a ellas desde Plan. No hay forma de llegar por el control segmentado.
 
+### La excepción: Progreso de la carrera
+
+La pantalla **Progreso de la carrera** es la única con permiso para jugar, por pedido explícito
+del usuario («full juguetón»): gradiente en el porcentaje grande, caminante que rebota, tira de
+casilleros que se pinta en cascada, confetti. Las prohibiciones de abajo **no aplican ahí, y
+sólo ahí**: nada de ese lenguaje se exporta al resto de la app. Aun en esa pantalla se respetan
+los tokens del tema (claro y oscuro), `prefers-reduced-motion` apaga todo el movimiento, y la
+información nunca viaja sólo en el color: los números y estados van escritos.
+
 ## Prohibiciones
 
-- Nada de fondos con textura, gradientes, vidrio esmerilado ni sombras de colores.
+- Nada de fondos con textura ni sombras de colores.
+- Nada de gradientes ni vidrio esmerilado, **salvo en la grilla de niveles**, que es la
+  excepción que el usuario pidió expresamente («capaz hacer algo tipo liquid glass»,
+  27/07/2026) después de rechazar tres intentos de resolver el contraste por color y por
+  tono. Ahí las materias son paneles translúcidos sobre un campo de luz desenfocado: lo
+  terminado es vidrio espeso y opaco que se hunde, lo pendiente es vidrio limpio con canto
+  especular. El campo de luz existe porque el desenfoque necesita algo detrás para
+  refractar. No se exporta a ninguna otra sección.
 - Nada de leyendas: si un color necesita explicación, la etiqueta va escrita en la fila.
 - Nada de líneas de correlativas dibujadas sobre la lista de materias. El grafo vive en su
   sección y en ningún otro lado.
