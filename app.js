@@ -647,20 +647,13 @@
       caja.setAttribute('class', 'nodo__caja');
       g.appendChild(caja);
 
-      var pt = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      pt.setAttribute('cx', p.x + 16); pt.setAttribute('cy', p.y + p.h / 2);
-      pt.setAttribute('r', 5.5);
-      pt.setAttribute('class', 'nodo__pt');
-      pt.setAttribute('fill', puede ? 'var(--accent)' : colorDe(estado));
-      g.appendChild(pt);
-
       var t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
       t.setAttribute('class', 'nodo__txt');
-      var lineas = cortar(m.nombre, 27);
+      var lineas = cortar(m.nombre, 24);
       var y0 = p.y + p.h / 2 - (lineas.length - 1) * 7 + 4.5;
       lineas.forEach(function (linea, i) {
         var ts = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        ts.setAttribute('x', p.x + 31);
+        ts.setAttribute('x', p.x + 16);
         ts.setAttribute('y', y0 + i * 14);
         ts.textContent = linea;
         t.appendChild(ts);

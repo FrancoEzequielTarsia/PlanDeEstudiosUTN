@@ -675,8 +675,7 @@ p { margin: 0; }
   transition: fill .15s ease, stroke .15s ease;
 }
 .nodo:hover .nodo__caja { stroke: var(--accent); }
-.nodo__txt { font-size: 12px; fill: var(--label); pointer-events: none; }
-.nodo__pt { pointer-events: none; }
+.nodo__txt { font-size: 13px; font-weight: 600; fill: var(--label); pointer-events: none; }
 .nodo.is-sel .nodo__caja { stroke: var(--accent); stroke-width: 2.5; }
 .nodo.is-apagado { opacity: .3; }
 
